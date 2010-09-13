@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="*.png">
+    <file>resources/button_cancel.png</file>
+  </qresource>
+</RCC>
