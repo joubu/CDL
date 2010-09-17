@@ -147,7 +147,7 @@ class DAO:
         db.execute("CREATE TABLE category_available(name)")
         db.execute("CREATE TABLE category(name)")
         db.execute("CREATE TABLE video(url, category, path, name, date,\
-                length)") #FIXME : if not exist  
+                length, PRIMARY KEY(url))") #FIXME : if not exist  
 
         db.execute("INSERT INTO config(dir_user, url) VALUES (?, ?)",
                 (os.path.join(os.path.expanduser("~"), 'Canal+DL'),
@@ -200,6 +200,17 @@ class DAO:
         return videos
 
     @classmethod
+    def video_exist(cls, video):
+        global db
+        result = db.query("SELECT count(url) FROM video WHERE url=?",
+                (video.url, ))
+        
+        if result[0][0] > 0:
+            return True
+
+        return False
+
+    @classmethod
     def dir_user(cls):
         global db
         r = db.query("SELECT dir_user FROM config")
@@ -232,7 +243,7 @@ class DAO:
         categories = []
         for r in result:
             name = r[0]
-            c = Category(url_dl, dir_user,  name)
+            c = Category(url_dl, dir_user,  name, create_path=True)
             categories.append(c)
 
         return categories
@@ -261,6 +272,9 @@ class Video():
 
     def __repr__(self):
         return u"Video [%s] %s\t%s" % (self.category, self.url, self.date)
+
+    def save(self):
+        DAO.add_video(self)
 
 
 
@@ -321,13 +335,21 @@ class FileViewer(QGroupBox):
             self.first = False
 
         for c in self.children:
+            lines_layout = c.findChild(QFrame).findChild(QVBoxLayout)
+
             c.setVisible(False)
             c.setChecked(False)
             for cat in categories:
                 if c.objectName() == cat.name:
                     c.setVisible(True)
-                    listview = c.findChild(ListCategory)
-                    listview.refresh(cat.videos)
+                    #line = c.findChildren(VideoLine)
+                    for v in cat.videos:
+                        line = VideoLine(v, parent=c)
+                        lines_layout.addLayout(line)
+
+class ListCategory(QListWidget):
+    def __init__(self, parent=None):
+        QListWidget.__init__(self, parent)
 
 class FileGroupBox(QGroupBox):
     def __init__(self, parent=None):
@@ -336,9 +358,20 @@ class FileGroupBox(QGroupBox):
         self.setCheckable(True)
         self.setChecked(True)
 
-class ListCategory(QListWidget):
-    def __init__(self, parent=None):
-        QListWidget.__init__(self, parent)
+class VideoLine(QHBoxLayout):
+    def __init__(self, video, parent=None):
+        QHBoxLayout.__init__(self)
+        self.nameLabel = QLabel(parent)
+        self.nameLabel.setText(video.name)
+        self.dateLabel = QLabel(parent)
+        self.dateLabel.setText(video.date)
+        self.lengthLabel = QLabel(parent)
+        self.lengthLabel.setText(str(video.length))
+        self.downloadButton = QPushButton(parent)
+        self.addWidget(self.nameLabel)
+        self.addWidget(self.dateLabel)
+        self.addWidget(self.lengthLabel)
+        self.addWidget(self.downloadButton)
 
     def refresh(self, videos):
         #self.reset()
@@ -419,6 +452,7 @@ class Download(QObject):
             self.layout.progressBar.setValue(pourcent)
         else:
             self.layout.progressBar.setValue(100)
+            self.emit(SIGNAL("terminated(object)"), self)
 
     def delete(self):
         if self.process.state() != QProcess.NotRunning:
@@ -437,12 +471,13 @@ class Download(QObject):
 
 class DownloadManager():
     def __init__(self, parent):
-        self.downloads = [] # FIXME useless ?
+        self.videos = {} # FIXME useless ?
         self.ui = Ui_DownloadManager(parent)
     
     def add(self, video):
         cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
                 (video.url, video.path)
+        print cmd
 
         layout = self.ui.new_layout()
 
@@ -453,8 +488,10 @@ class DownloadManager():
         QObject.connect(download, SIGNAL("deleteLayout(object)"), 
                 self.deleteLayout)
 
+        QObject.connect(download, SIGNAL("terminated(object)"), 
+                self.downloadTerminated)
 
-        self.downloads.append(download)
+        self.videos[download] = video
         self.ui.show()
 
     def deleteLayout(self, layout):
@@ -462,6 +499,9 @@ class DownloadManager():
         del layout
         if len(self.ui.verticalLayout.children()) < 1: # FIXME
             self.ui.close()
+
+    def downloadTerminated(self, download):
+        self.videos[download].save()
 
 class ListAvailables(QListWidget):
     def __init__(self, parent=None):
@@ -478,6 +518,8 @@ class ListAvailables(QListWidget):
         self.downloadManager = DownloadManager(self)
 
     def add(self, video):
+        if DAO.video_exist(video):
+            return
         item = ListAvailableItem(video.url, self)
         item.setData(Qt.UserRole, video)
         self.addItem(item)
@@ -533,7 +575,6 @@ class Ui_DownloadManager(QWidget):
         
 class Ui_Wait(QProgressDialog):
     def __init__(self, parent=None):
-        print "WAITING !"
         QProgressDialog.__init__(self, u"Recherche des nouvelles vidéos en cours ...",
                 "Fermer", 0, 0, parent)
         self.setModal(True)

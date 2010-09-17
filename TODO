@@ -1,2 +1,2 @@
-downloader.py : lancertelechargement
-urltortmpdump.py
+signal sur fin du téléchargement (fait) et supprimer la ligne dans la liste des
+dl dispo
