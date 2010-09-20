@@ -19,6 +19,7 @@ import fcntl
 import time
 import subprocess
 import threading
+import signal
 
 
 try:
@@ -29,6 +30,9 @@ except Exception, e:
 
 debug = False
 #debug = True
+
+# Quit sur CTRL-C
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 class DbConnect:
     def __init__(self):
@@ -469,15 +473,15 @@ class Download(QObject):
 
         del lo
 
-class DownloadManager():
+class DownloadManager(QWidget):
     def __init__(self, parent):
+        QWidget.__init__(self)
         self.videos = {} # FIXME useless ?
         self.ui = Ui_DownloadManager(parent)
     
     def add(self, video):
         cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
                 (video.url, video.path)
-        print cmd
 
         layout = self.ui.new_layout()
 
@@ -502,31 +506,41 @@ class DownloadManager():
 
     def downloadTerminated(self, download):
         self.videos[download].save()
+        self.emit(SIGNAL("terminated(object)"), self.videos[download])
 
-class ListAvailables(QListWidget):
+class ListAvailables(QListView):
     def __init__(self, parent=None):
-        QListWidget.__init__(self, parent)
+        QListView.__init__(self, parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setStyleSheet("ListAvailableItem { \
-                border: 15px solid #C4C4C3;\
-                border-bottom-color: #C2C7CB;\
-                border-top-left-radius: 4px;\
-                border-top-right-radius: 4px;\
-                min-width: 8ex;\
-                padding: 2px;\
-                }")
+
+        self.model = ListAvailablesVideosModel(parent)
+        self.setModel(self.model)
+        
         self.downloadManager = DownloadManager(self)
+        QObject.connect(self.downloadManager, SIGNAL("terminated(object)"),
+                self.remove)
+
+    def clear(self):
+        self.model.tabData = []
 
     def add(self, video):
         if DAO.video_exist(video):
             return
-        item = ListAvailableItem(video.url, self)
-        item.setData(Qt.UserRole, video)
-        self.addItem(item)
+        self.model.add(video)
+
+    def remove(self, video):
+        self.model.remove(video)
+
+    def selectedVideos(self):
+        indexes = self.selectedIndexes()
+        videos = []
+        for i in indexes:
+            v = self.model.tabData[i.row()]
+            videos.append(v)
+        return videos
 
     def download(self):
-        selected = map(lambda i: i.data(Qt.UserRole).toPyObject(), self.selectedItems())
-        for v in selected:
+        for v in self.selectedVideos():
             self.downloadManager.add(v)
 
     def refresh(self, liste):
@@ -534,10 +548,59 @@ class ListAvailables(QListWidget):
         for item in liste:
             self.add(item)
 
+class ListAvailablesVideosModel(QAbstractListModel):
+    def __init__(self, parent):
+        QAbstractListModel.__init__(self, parent)
+        self.hHeaderData = []
+        self.vHeaderData = []
+        self.tabData = []
 
-class ListAvailableItem(QListWidgetItem):
-    def __init__(self, name,  parent=None):
-        QListWidgetItem.__init__(self, name, parent)
+    def rowCount(self, parent):
+        return len(self.tabData)
+
+    def columnCount(self, parent):
+        return 1
+
+    def data(self, index, role):
+        if not index.isValid(): 
+            return QVariant()
+        elif role == Qt.ToolTipRole:
+            return QString(self.tabData[index.row()].url)
+        elif role != Qt.DisplayRole: 
+            return QVariant()
+
+        return QVariant(self.tabData[index.row()].name)
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole:
+            return QVariant()
+        
+        if orientation == Qt.Horizontal:
+            #return QVariant(self.hHeaderData[section])
+            return QVariant()
+        elif orientation == Qt.Vertical:
+            return QVariant()
+
+        return QVariant()
+
+    def removeColumns(self, position, columns, parent=QModelIndex()):
+        self.beginRemoveColumns(parent, position, position + columns - 1)
+        self.hHeaderData[position:position+columns]=[]
+        self.endRemoveColumns()
+        return True
+
+    def add(self, video, parent=QModelIndex()):
+        self.beginInsertRows(parent, 1, 0)
+        self.tabData.append(video)
+        self.tabData = sorted(self.tabData, key=lambda video: video.name)
+        self.endInsertRows()
+        return True
+
+    def remove(self, video, parent=QModelIndex()):
+        self.beginRemoveRows(parent, 0, len(self.tabData))
+        self.tabData.pop(self.tabData.index(video))
+        self.endRemoveRows()
+        return True
 
 
 def get_random_video():
@@ -545,8 +608,6 @@ def get_random_video():
         "/home/jonathan/Canal+DL/", "zapping")
 
     return Video("rtmp://vod-fms.canalplus.fr/ondemand/videos/1009/ZAPPING_EMISSION_100908_CAN_150771_video_H.flv", cat)
-
-
 
 
 class Ui_DownloadManager(QWidget):

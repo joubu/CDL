@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_MainWindow.ui'
 #
-# Created: Fri Sep 17 17:23:48 2010
+# Created: Mon Sep 20 17:35:55 2010
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -231,7 +231,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QObject.connect(self.discrete, QtCore.SIGNAL("toggled(bool)"), self.listWidget_discrete.setVisible)
         QtCore.QObject.connect(self.boite, QtCore.SIGNAL("toggled(bool)"), self.listWidget_boite.setVisible)
         QtCore.QObject.connect(self.guignols, QtCore.SIGNAL("toggled(bool)"), self.listWidget_guignols.setVisible)
