@@ -6,7 +6,8 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from Ui_MainWindow import Ui_MainWindow
-from Ui_Download import Ui_Download
+from Ui_Preferences import Ui_Preferences
+import resources_rc
 from xml.dom import minidom
 import urllib
 import sys
@@ -21,6 +22,11 @@ import subprocess
 import threading
 import signal
 
+import pygst
+pygst.require("0.10")
+import gst
+
+import datetime
 
 try:
     import sqlite3
@@ -31,8 +37,14 @@ except Exception, e:
 debug = False
 #debug = True
 
+VLC_PATH = "/usr/bin/vlc"
+
 # Quit sur CTRL-C
 signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+if not os.path.exists('/usr/bin/flvstreamer'):
+    print "flvstreamer must be installed"
+    exit(1)
 
 class DbConnect:
     def __init__(self):
@@ -77,22 +89,25 @@ class DbConnect:
         self.cur.close()
 
 class Category:
-    def __init__(self, url, dir_user, name, create_path=False):
-        self.path = os.path.join(dir_user, name)
-        self.name = name
-        self.url = os.path.join(url, self.name)
+    def __init__(self, url, dir_user, name, keywords, create_path=False):
+        self.name = str(name)
+        self.keywords = str(keywords)
+        self.path = os.path.join(str(dir_user), self.name)
+        self.url = os.path.join(str(url), self.keywords)
+
+        self.new_videos = []
         self.videos = []
         if create_path and not os.path.exists(self.path):
             try:
                 os.makedirs(self.path)
             except Exception, e:
-                print "%s ne peut être créé" % self.dir_user
+                print "%s ne peut être créé" % self.path
                 exit(2)
  
     def __repr__(self):
         return self.name
 
-    def list_videos(self):
+    def list_new_videos_availables(self, blacklist=list()):
         list_videos = []
         dom = minidom.parse(urllib.urlopen(self.url))
         video_node = dom.getElementsByTagName('VIDEO')
@@ -106,10 +121,22 @@ class Category:
                 continue
 
             debit_node_list = vn.getElementsByTagName('HAUT_DEBIT')
+
+            """
+            for dn in date_node_list:
+                try:
+                    url = str(debit_node_list[0].firstChild.nodeValue)
+                    print url
+                except:
+                    continue
+            """
+
             if date_node_list.length == debit_node_list.length and \
                     rubrique.lower().find(self.name.lower()) > -1:
                 for dn in date_node_list:
                     url = str(debit_node_list[0].firstChild.nodeValue)
+                    if url in blacklist:
+                        continue
                     if url.find('rtmp') > -1:
                         date = str(dn.firstChild.nodeValue)
                         list_videos.append(Video(url, self, date=date))
@@ -121,85 +148,130 @@ class Config:
         tables = db.query("SELECT name FROM SQLite_Master")
         if len(tables) == 0:
             self.reset()
-        else:
-            self.dir_user = DAO.dir_user()
-            self.url_dl = DAO.url_dl()
-            self.categories_availables = DAO.categories_availables(self.url_dl, 
-                    self.dir_user)
-            self.categories = DAO.categories(self.url_dl, self.dir_user)
-            for c in self.categories:
-                c.videos = DAO.videos(c)
+
+        self.init_from_DAO()
+
+    def init_from_DAO(self):
+        self.dir_user = DAO.dir_user()
+        self.url_dl = DAO.url_dl()
+        self.player = DAO.player()
+        self.categories_availables = DAO.categories_availables(self.url_dl, 
+                self.dir_user)
+        self.categories = DAO.categories(self.url_dl, self.dir_user)
+        for c in self.categories:
+            c.videos = DAO.videos(c)
+        self.blacklist = DAO.blacklist()
+
+    
 
     def path(self, category):
         #FIXME GET PATH IN BDD
         return os.path.join(self.dir_user)
+
+    def save(self):
+        DAO.save_config(self)
     
     def reset(self):
         DAO.reset_config()
-        self.dir_user = DAO.dir_user()
-        self.url_dl = DAO.url_dl()
-        self.categories_availables = DAO.categories_availables(
-                self.url_dl, self.dir_user)
-        self.categories = DAO.categories(self.url_dl, self.dir_user)
 
 class DAO:
 
     @classmethod
     def reset_config(cls):
         global db
-        db.execute("CREATE TABLE config(dir_user, url)")
-        db.execute("CREATE TABLE category_available(name)")
+        db.execute("CREATE TABLE config(id INTEGER PRIMARY KEY AUTOINCREMENT, dir_user, url, player)")
+        db.execute("CREATE TABLE category_available(name, keywords)")
         db.execute("CREATE TABLE category(name)")
-        db.execute("CREATE TABLE video(url, category, path, name, date,\
-                length, PRIMARY KEY(url))") #FIXME : if not exist  
+        db.execute("CREATE TABLE video(url, category, name, date,\
+                length, seen, PRIMARY KEY(url))") #FIXME : if not exist  
+        db.execute("CREATE TABLE blacklist(url)")
 
-        db.execute("INSERT INTO config(dir_user, url) VALUES (?, ?)",
+        db.execute("INSERT INTO config(dir_user, url, player) VALUES (?, ?, ?)",
                 (os.path.join(os.path.expanduser("~"), 'Canal+DL'),
-                    'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/search/'))
-        db.executemany("INSERT INTO category_available(name) VALUES (?)",
-                (("discrete",),
-                 ("boite",), 
-                 ("planquee",), 
-                 ("guignols",), 
-                 ("petit",),
-                 ("petite",), 
-                 ("meteo",), 
-                 ("pepites",),   
-                 ("groland",), 
-                 ("sav",), 
-                 ("tele",), 
-                 ("salut",), 
-                 ("zapping",)
+                    'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/search/',
+                    'vlc'))
+        db.executemany("INSERT INTO category_available(name, keywords) VALUES (?, ?)",
+                (("discrete", "action+discrete"),
+                 ("boite", "boite+question"), 
+                 ("boucan", "boucan"),
+                 ("guignols", "les+guignols"), 
+                 ("grand", "grand+journal"),
+                 ("groland", "groland"), 
+                 ("petit", "petit+journal"),
+                 ("petite", "petite+semaine"), 
+                 ("matinale", "la+matinale"),
+                 ("meteo", "la+meteo"), 
+                 ("pepites", "pepites+net"),
+                 ("sav", "sav"), 
+                 ("salut", "salut+les+terriens"), 
+                 ("zapping", "zapping")
                  ))
 
         db.executemany("INSERT INTO category(name) VALUES (?)",
                 (("petit",),
             ("zapping", )))
         db.commit()
+    @classmethod
+    def save_config(cls, config):
+        global db
+        db.execute("INSERT INTO config(dir_user, url, player) VALUES (?, ?, ?)",
+                (str(config.dir_user), str(config.url_dl), str(config.player)))
+        db.execute("DELETE FROM category")
+        for c in config.categories:
+            db.execute("INSERT INTO category(name) VALUES (?)", (str(c.name), ))
+
+        db.commit()
 
     @classmethod
     def add_video(cls, video):
         global db
-        db.execute("INSERT INTO video(url, category, path, name, date, length) \
+
+        seen = 0
+        if video.seen == True:
+            seen = 1
+            
+        db.execute("INSERT INTO video(url, category, name, date, length, seen) \
                 VALUES(?, ?, ?, ?, ?, ?)", 
-                (video.url, video.category.name, video.path, video.name,
-                    video.date, video.length))
+                (video.url, video.category.name, video.name,
+                    video.date, video.length, seen))
+        db.commit()
+
+    @classmethod
+    def update_video(cls, video):
+        global db
+
+        seen = 0
+        if video.seen == True:
+            seen = 1
+
+        db.execute("UPDATE video SET category=?, name=?, date=?, \
+                length=?, seen=? WHERE url=?", 
+                (video.category.name, video.name,
+                    video.date, video.length, seen, video.url))
+        db.commit()
+
+    @classmethod
+    def blacklist_video(cls, video):
+        global db
+        db.execute("INSERT INTO blacklist(url) VALUES(?)", (video.url,))
         db.commit()
 
     @classmethod
     def videos(cls, category):
         global db
-        result = db.query("SELECT url, path, name, date, length FROM video WHERE category=?",
+        result = db.query("SELECT url, name, date, length, seen FROM \
+                video WHERE category=? AND url NOT IN (SELECT url FROM blacklist)",
                 (category.name, ))
         videos = []
         for r in result:
             url = r[0]
-            path = r[1]
-            name = r[2]
-            date = r[3]
-            length = r[4]
-            videos.append(Video(url, category, path=path, name=name,
-                date=date, length=length))
+            name = r[1]
+            date = r[2]
+            length = r[3]
+            seen = r[4]
+            v = Video(url, category, name=name,
+                date=date, length=length, seen=seen)
+            videos.append(v)
 
         return videos
 
@@ -215,73 +287,138 @@ class DAO:
         return False
 
     @classmethod
+    def blacklist(cls):
+        global db
+        result = db.query("SELECT url FROM blacklist")
+        urls = []
+        for r in result:
+            urls.append(r[0])
+
+        return urls
+
+    @classmethod
     def dir_user(cls):
         global db
-        r = db.query("SELECT dir_user FROM config")
+        r = db.query("SELECT dir_user FROM config ORDER BY id DESC LIMIT 1")
         return r[0][0]
 
     @classmethod
     def url_dl(cls):
         global db
-        r = db.query("SELECT url FROM config")
+        r = db.query("SELECT url FROM config ORDER BY id DESC LIMIT 1")
         return r[0][0]
-        
 
     @classmethod
-    def categories_availables(self, url_dl, dir_user):
+    def player(cls):
         global db
-        result = db.query("SELECT * FROM \
+        r = db.query("SELECT player FROM config ORDER BY id DESC LIMIT 1")
+        return r[0][0]
+        
+    @classmethod
+    def category(cls, url_dl, dir_user, name):
+        global db
+        result = db.query("SELECT keywords FROM category_available \
+                    WHERE name=?", (str(name), ))
+
+        if not len(result) > 0:
+            return None
+        
+        return Category(url_dl, dir_user, name, keywords=result[0][0],
+                create_path=True)
+
+    @classmethod
+    def categories_availables(cls, url_dl, dir_user):
+        global db
+        result = db.query("SELECT name, keywords FROM \
             category_available")
         categories = []
         for r in result:
             name = r[0]
-            c = Category(url_dl, dir_user,  name)
+            keywords = r[1]
+            c = Category(url_dl, dir_user, name, keywords)
             categories.append(c)
 
         return categories
 
     @classmethod
-    def categories(self, url_dl, dir_user):
+    def categories(cls, url_dl, dir_user):
         global db
-        result = db.query("SELECT * FROM category")
+        result = db.query("SELECT c.name, ca.keywords FROM category c, \
+                    category_available ca WHERE c.name=ca.name")
         categories = []
         for r in result:
             name = r[0]
-            c = Category(url_dl, dir_user,  name, create_path=True)
+            keywords = str(r[1])
+            c = Category(url_dl, dir_user, name, keywords, create_path=True)
             categories.append(c)
 
         return categories
 
 
-
-
 class Video():
-    def __init__(self, url, category, path=None, name=None, date=None,
-        length=None):
+    def __init__(self, url, category, name=None, date=None,
+                    length=None, seen=False):
+
         self.url = url
         self.category = category
         self.date = date
+        
         if name == None:
             filename = url.split('/')[-1]
-            self.name = filename
+            try:
+                matches = re.compile("(.*)_CAN_([0-9]*)_video_H\.flv").findall(filename)
+                self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
+            except:
+                self.name = filename
         else:
             self.name = name
 
-        if path == None:
-            self.path = os.path.join(self.category.path, filename)
-        else:
-            self.path = path
+        self.path = os.path.join(self.category.path, self.name)
+        print self.path
 
-        self.length = 0
+        if length == None:
+            self.length = 0
+        else:
+            self.length = length
+
+        self.seen = seen
+
+
+    def get_length(self):
+        try:
+            d = gst.parse_launch("filesrc name=source ! decodebin2 ! fakesink")
+            source = d.get_by_name("source")
+            source.set_property("location", self.path)
+            d.set_state(gst.STATE_PLAYING)
+            d.get_state()
+            format = gst.Format(gst.FORMAT_TIME)
+            duration = d.query_duration(format)[0]
+            d.set_state(gst.STATE_NULL)
+            length = datetime.timedelta(seconds=(duration / gst.SECOND))
+            return str(length)
+        except Exception, e:
+            return str(-1)
+
 
     def __repr__(self):
         return u"Video [%s] %s\t%s" % (self.category, self.url, self.date)
 
     def save(self):
+        self.length = self.get_length()
         DAO.add_video(self)
 
+    def rm(self):
+        if os.path.exists(self.path):
+            os.remove(self.path)
 
+    def blacklist(self):
+        DAO.blacklist_video(self)
 
+    def marked_as_seen(self, seen):
+        self.seen = seen
+        DAO.update_video(self)
+
+#       SUBPROCESS AVEC RECUP DE LA SORTIE
 #        self.bla = QObject()
 #        QObject.connect(self.bla, SIGNAL("pourcentageFichier(int)"), self.bid)
 #
@@ -312,14 +449,15 @@ class Video():
 #            traceback.format_exc(e)
 #            exit(2)
 #        
+
 def get_list_new_videos(config):
     videos = []
     for c in config.categories:
         if debug:
             print u"categorie %s trouvée"%c
         try:
-            list_videos = c.list_videos()
-            c.videos = list_videos
+            list_videos = c.list_new_videos_availables(config.blacklist)
+            c.new_videos = list_videos
             videos.extend(list_videos)
         except Exception, e:
             print traceback.format_exc(e)
@@ -327,80 +465,146 @@ def get_list_new_videos(config):
 
     return videos
     
-class FileViewer(QGroupBox):
+class TableViewCategory(QTableView):
     def __init__(self, parent=None):
-        QGroupBox.__init__(self, parent)
-        self.children = None
-        self.first = True
+        QTableView.__init__(self, parent)
 
-    def refresh_all(self, categories):
-        if self.first:
-            self.children = self.findChildren(QGroupBox)
-            self.first = False
+        self.model = ListMyVideosModel(self)
+        self.setModel(self.model)
 
-        for c in self.children:
-            lines_layout = c.findChild(QFrame).findChild(QVBoxLayout)
+        vh = self.verticalHeader()
+        vh.setVisible(False)
+        hh = self.horizontalHeader()
+        hh.setMovable(True)
+        #hh.setResizeMode(QHeaderView.Stretch)
+        hh.setResizeMode(QHeaderView.ResizeToContents)
+        hh.setVisible(True)
+        self.resizeColumnsToContents() 
 
-            c.setVisible(False)
-            c.setChecked(False)
-            for cat in categories:
-                if c.objectName() == cat.name:
-                    c.setVisible(True)
-                    #line = c.findChildren(VideoLine)
-                    for v in cat.videos:
-                        line = VideoLine(v, parent=c)
-                        lines_layout.addLayout(line)
+        self.player = None
 
-class ListCategory(QListWidget):
-    def __init__(self, parent=None):
-        QListWidget.__init__(self, parent)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
-class FileGroupBox(QGroupBox):
+    def clear(self):
+        self.model.tabData = []
+
+    def add(self, video):
+        if DAO.video_exist(video):
+            self.model.add(video)
+        else:
+            pass # FIXME
+
+    def remove(self, video):
+        self.model.remove(video)
+
+    def currentVideo(self):
+        indexes = self.selectedIndexes()
+        index = indexes[0]
+        return self.model.tabData[index.row()]
+
+    def refresh(self, liste):
+        self.clear()
+        for video in liste:
+            self.add(video)
+
+    def marked_as_seen(self, seen):
+        indexes = self.selectedIndexes()
+        index = indexes[0]
+        v = self.model.tabData[index.row()]
+        v.marked_as_seen(seen)
+        
+        index = self.model.createIndex(index.row(), 3) # FIXME BURK !
+        self.model.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index) 
+
+    def currentChanged(self, i, j):
+        self.emit(SIGNAL("selectionChanged(TableViewCategory)"), self)
+        
+
+class ListMyVideosModel(QAbstractTableModel):
+    def __init__(self, parent):
+        QAbstractTableModel.__init__(self, parent)
+        self.hHeaderData = ["Name", "Date", "Length", "Seen"]
+        self.vHeaderData = []
+        self.tabData = []
+
+    def rowCount(self, parent):
+        return len(self.tabData)
+
+    def columnCount(self, parent):
+        return len(self.hHeaderData)
+
+    def data(self, index, role):
+        if not index.isValid(): 
+            return QVariant()
+        elif role == Qt.ToolTipRole:
+            return QVariant()
+        elif role == Qt.DisplayRole:
+            if index.column() == 0:
+                return QString(self.tabData[index.row()].name)
+            elif index.column() == 1:
+                return QString(self.tabData[index.row()].date)
+            elif index.column() == 2:
+                return QString(self.tabData[index.row()].length)
+            elif index.column() == 3:
+                seen = "non"
+                if self.tabData[index.row()].seen == True:
+                    seen = "oui"
+                return QString(seen)
+        else:
+            return QVariant()
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole:
+            return QVariant()
+        if orientation == Qt.Horizontal:
+            return QVariant(self.hHeaderData[section])
+        elif orientation == Qt.Vertical:
+            return QVariant()
+
+        return QVariant()
+
+    def removeColumns(self, position, columns, parent=QModelIndex()):
+        self.beginRemoveColumns(parent, position, position + columns - 1)
+        self.hHeaderData[position:position+columns]=[]
+        self.endRemoveColumns()
+        return True
+
+    def add(self, video, parent=QModelIndex()):
+        self.beginInsertRows(parent, 1, 1)
+        self.tabData.append(video)
+        self.tabData = sorted(self.tabData, key=lambda video: video.date)
+        self.endInsertRows()
+        return True
+
+    def remove(self, video, parent=QModelIndex()):
+        self.beginRemoveRows(parent, 0, len(self.tabData))
+        self.tabData.pop(self.tabData.index(video))
+        self.endRemoveRows()
+        return True
+
+
+
+
+class CategoryGroupBox(QGroupBox):
     def __init__(self, parent=None):
         QGroupBox.__init__(self, parent)
         #self.setFlat(False)
         self.setCheckable(True)
         self.setChecked(True)
 
-class VideoLine(QHBoxLayout):
-    def __init__(self, video, parent=None):
-        QHBoxLayout.__init__(self)
-        self.nameLabel = QLabel(parent)
-        self.nameLabel.setText(video.name)
-        self.dateLabel = QLabel(parent)
-        self.dateLabel.setText(video.date)
-        self.lengthLabel = QLabel(parent)
-        self.lengthLabel.setText(str(video.length))
-        self.downloadButton = QPushButton(parent)
-        self.addWidget(self.nameLabel)
-        self.addWidget(self.dateLabel)
-        self.addWidget(self.lengthLabel)
-        self.addWidget(self.downloadButton)
-
-    def refresh(self, videos):
-        #self.reset()
-        for v in videos:
-            item = QListWidgetItem(v.name, self)
-            item.setData(Qt.UserRole, v)
-            self.addItem(item)
-            item.setSelected(True)
-
-        self.sortItems()
-
-    def refresh_forced(self):
-        pass
 
 class DownloadProcess(QProcess):
     def __init__(self, parent=None):
         QProcess.__init__(self, parent)
-        new_env=QProcess.systemEnvironment()
+        new_env = QProcess.systemEnvironment()
         self.setEnvironment(new_env)
 
         self.setReadChannel(QProcess.StandardError)
 
         QObject.connect(self, SIGNAL("readyRead()"),
                 self.tryReadPourcent)
-        QObject.connect(self, SIGNAL("finished(int)"), self.finished)
+        QObject.connect(self, SIGNAL("finished(int, QProcess::ExitStatus)"), self.finished)
 
     def tryReadPourcent(self):
         line = self.readAll()
@@ -411,8 +615,17 @@ class DownloadProcess(QProcess):
 
         self.emit(SIGNAL("majDownloadBar(int)"), pourcent)
 
-    def finished(self, int):
-        self.emit(SIGNAL("majDownloadBar(int)"), 100)
+    def finished(self, exitCode, exitStatus):
+        if exitCode == 0 and exitStatus == 0: # Fin normale du process
+            self.emit(SIGNAL("majDownloadBar(int)"), 100)
+        elif exitCode == 0 and exitStatus == 1: # Arrêt demandé par user
+            self.emit(SIGNAL("stoppedByUser()"))
+        elif exitCode == 1 and exitStatus == 0: # Reprise après arrêt
+            self.emit(SIGNAL("stoppedByError()"))
+        else:
+            print "?????????????????"
+            print "exit code=%s exitStatus=%s" % (exitCode, exitStatus)
+            print "?????????????????"
 
     def stop(self):
         self.kill()
@@ -445,20 +658,29 @@ class Download(QObject):
         self.layout = layout
 
         QObject.connect(self.layout.pushButton, SIGNAL("clicked()"), 
-                self.delete)
+                self.stop)
     
         QObject.connect(self.process, SIGNAL("majDownloadBar(int)"),
                 self.majProgressBar)
-
+        QObject.connect(self.process, SIGNAL("stoppedByUser()"), 
+                self.stoppedByUser)
+        QObject.connect(self.process, SIGNAL("stoppedByError()"),
+                self.stoppedByError)
 
     def majProgressBar(self, pourcent):
         if pourcent < 100:
             self.layout.progressBar.setValue(pourcent)
         else:
             self.layout.progressBar.setValue(100)
-            self.emit(SIGNAL("terminated(object)"), self)
+            self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 0)
 
-    def delete(self):
+    def stoppedByUser(self):
+        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 1)
+
+    def stoppedByError(self):
+        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 1)
+
+    def stop(self):
         if self.process.state() != QProcess.NotRunning:
             self.process.stop()
 
@@ -469,84 +691,8 @@ class Download(QObject):
             i.widget().deleteLater()
             del i
 
-        self.emit(SIGNAL("deleteLayout(object)"), self.layout)
-
         del lo
-
-class DownloadManager(QWidget):
-    def __init__(self, parent):
-        QWidget.__init__(self)
-        self.videos = {} # FIXME useless ?
-        self.ui = Ui_DownloadManager(parent)
-    
-    def add(self, video):
-        cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
-                (video.url, video.path)
-
-        layout = self.ui.new_layout()
-
-        process = DownloadProcess()
-        process.start(cmd)
-        download = Download(process, layout)
-        
-        QObject.connect(download, SIGNAL("deleteLayout(object)"), 
-                self.deleteLayout)
-
-        QObject.connect(download, SIGNAL("terminated(object)"), 
-                self.downloadTerminated)
-
-        self.videos[download] = video
-        self.ui.show()
-
-    def deleteLayout(self, layout):
-        self.ui.verticalLayout.removeItem(layout)
-        del layout
-        if len(self.ui.verticalLayout.children()) < 1: # FIXME
-            self.ui.close()
-
-    def downloadTerminated(self, download):
-        self.videos[download].save()
-        self.emit(SIGNAL("terminated(object)"), self.videos[download])
-
-class ListAvailables(QListView):
-    def __init__(self, parent=None):
-        QListView.__init__(self, parent)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-
-        self.model = ListAvailablesVideosModel(parent)
-        self.setModel(self.model)
-        
-        self.downloadManager = DownloadManager(self)
-        QObject.connect(self.downloadManager, SIGNAL("terminated(object)"),
-                self.remove)
-
-    def clear(self):
-        self.model.tabData = []
-
-    def add(self, video):
-        if DAO.video_exist(video):
-            return
-        self.model.add(video)
-
-    def remove(self, video):
-        self.model.remove(video)
-
-    def selectedVideos(self):
-        indexes = self.selectedIndexes()
-        videos = []
-        for i in indexes:
-            v = self.model.tabData[i.row()]
-            videos.append(v)
-        return videos
-
-    def download(self):
-        for v in self.selectedVideos():
-            self.downloadManager.add(v)
-
-    def refresh(self, liste):
-        self.clear()
-        for item in liste:
-            self.add(item)
+        self.emit(SIGNAL("deleteLayout(object)"), self.layout)
 
 class ListAvailablesVideosModel(QAbstractListModel):
     def __init__(self, parent):
@@ -602,12 +748,13 @@ class ListAvailablesVideosModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
+class PlayerProcess(QProcess):
+    def __init__(self, player, video, parent=None):
+        QProcess.__init__(self, parent)
+        self.cmd = "%s %s" % (player, video.path)
 
-def get_random_video():
-    cat = Category("http://lien-vers-categorie-bidon.fr",
-        "/home/jonathan/Canal+DL/", "zapping")
-
-    return Video("rtmp://vod-fms.canalplus.fr/ondemand/videos/1009/ZAPPING_EMISSION_100908_CAN_150771_video_H.flv", cat)
+    def start(self):
+        self.startDetached(self.cmd)
 
 
 class Ui_DownloadManager(QWidget):
@@ -618,7 +765,6 @@ class Ui_DownloadManager(QWidget):
         self.verticalLayout = QVBoxLayout(self)
         self.verticalLayout.setObjectName("verticalLayout")
 
-
     def new_layout(self):
         progressBar = QProgressBar(self)
         pushButton = QPushButton(self)
@@ -626,18 +772,30 @@ class Ui_DownloadManager(QWidget):
         self.verticalLayout.addLayout(downloadLayout)
         return downloadLayout
 
-    def launch(self, videos):
-        for v in videos:
-            if v.download() != 0:
-                print u"%s n'a pas été téléchargé" % v
-                continue
-            DAO.add_video(v)
+    def deleteLayout(self, layout):
+        self.verticalLayout.removeItem(layout)
+        del layout
 
-        
+
+    # FIXME Comment dissocier un widget.close() d'une fermeture par la croix ?
+    """
+    def closeEvent(self, event):
+        reply = QMessageBox.question(self, 'TITRE ?',
+            "Voulez-vous réellement fermer la fenêtre des\
+            téléchargements ? \n Cette action supprimera tous les\
+            téléchargements en cours !", QMessageBox.Yes, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            self.emit(SIGNAL("killAll()"))
+            event.accept()
+        else:
+            event.ignore()
+    """
+
 class Ui_Wait(QProgressDialog):
     def __init__(self, parent=None):
         QProgressDialog.__init__(self, u"Recherche des nouvelles vidéos en cours ...",
-                "Fermer", 0, 0, parent)
+                "Fermer", 0, 0)
         self.setModal(True)
         self.setWindowTitle(u"Recherche ...")
         self.setCancelButton(None)
@@ -651,51 +809,362 @@ class Ui_Wait(QProgressDialog):
 
 db = DbConnect()
 
+class Preferences(QWidget):
+    def __init__(self, config, parent):
+        QWidget.__init__(self)
+        self.ui = Ui_Preferences()
+        self.ui.setupUi(self)
+        self.config = config
+        self.ui.lineEditPlayer.setText(config.player)
+        self.ui.lineEditDirUser.setText(config.dir_user)
+
+        for c in self.config.categories:
+            cb = self.findChild(QCheckBox, c.name)
+            if cb:
+                cb.setCheckState(Qt.Checked)
+
+    def tr(self):
+        self.ui.retranslateUi(self)
+
+    @pyqtSlot()
+    def on_buttonBox_accepted(self):
+        new_dir_user = str(self.ui.lineEditDirUser.text())
+        if self.config.dir_user != new_dir_user:
+            try:
+                os.renames(self.config.dir_user, new_dir_user)
+                self.config.dir_user = new_dir_user
+            except Exception, e:
+                r = QMessageBox.critical(self, "Path", "Le chemin %s n'existe pas"%new_dir_user)
+                print e
+                return
+                
+        self.config.player = self.ui.lineEditPlayer.text()
+        self.config.categories = []
+        for cb in self.findChildren(QCheckBox):
+            if cb.isChecked():
+                cat = DAO.category(self.config.url_dl, self.config.dir_user,
+                        cb.objectName())
+                cat.videos = DAO.videos(cat)
+                self.config.categories.append(cat)
+        self.config.save()
+        self.emit(SIGNAL("configChanged(list)"), self.config.categories)
+        self.close()
+
+    @pyqtSlot()
+    def on_buttonBox_rejected(self):
+        self.close()
+
+class FileViewer(QFrame):
+    def __init__(self, parent=None):
+        QFrame.__init__(self, parent)
+        self.categoriesGB = []
+        self.listTVChildren = []
+        self.listTVActives = []
+        self.currentSelection = None
+        self.first = True
+
+    def refresh_all(self, categories):
+        if self.first:
+            self.categoriesGB = self.findChildren(CategoryGroupBox)
+            self.first = False
+
+        self.listTVChildren = []
+        self.listTVActives = []
+        for c in self.categoriesGB:
+            listCategory = c.findChildren(TableViewCategory)
+            if len(listCategory) == 0:
+                continue
+            listCategory = listCategory[0]
+
+            QObject.disconnect(listCategory, SIGNAL("selectionChanged(TableViewCategory)"), 
+                    self.selectionChanged)
+            QObject.connect(listCategory, SIGNAL("selectionChanged(TableViewCategory)"), 
+                    self.selectionChanged)
+
+            QObject.disconnect(listCategory, SIGNAL("doubleClicked(QModelIndex)"),
+                    self.play_requested)
+            QObject.connect(listCategory, SIGNAL("doubleClicked(QModelIndex)"),
+                    self.play_requested)
+
+
+            c.setVisible(False)
+            for cat in categories:
+                if c.objectName() == cat.name:
+                    c.setVisible(True)
+                    self.listTVActives.append(listCategory)
+                    listCategory.clear()
+                    for v in cat.videos:
+                        listCategory.add(v)
+    
+    def play_requested(self, index):
+        v = self.videoSelected()
+        self.emit(SIGNAL("play(Video)"), v)
+
+    def add(self, video):
+        categoryGB = self.findChild(CategoryGroupBox, video.category.name)
+        catTV = categoryGB.findChildren(TableViewCategory)
+        if len(catTV) == 0:
+            return
+        catTV[0].add(video)
+
+    def videoSelected(self):
+        if self.currentSelection == None:
+            return None
+        return self.currentSelection.currentVideo()
+
+
+    def selectionChanged(self, listCategory):
+        if id(self.currentSelection) == id(listCategory):
+            return
+        self.currentSelection = listCategory
+        for c in self.listTVActives:
+            if id(c) != id(self.currentSelection):
+                c.clearSelection()
+
+    def marked_as_seen_selected(self, seen):
+        self.currentSelection.marked_as_seen(seen)
+
+
+class DownloadManager(QObject):
+    def __init__(self, parent, ui_listAvailables):
+        QObject.__init__(self)
+        self.videos = {}
+        self.nb_downloads_in_progress = 0
+        self.ui_download = Ui_DownloadManager(parent)
+        self.ui_listAvailables = ui_listAvailables
+
+        QObject.connect(self.ui_download, SIGNAL("killAll()"), self.killAll)
+    
+    def download_selected(self):
+        for v in self.ui_listAvailables.selectedVideos():
+            self.download(v)
+
+    def download(self, video):
+        if video in self.videos.values():
+            return
+
+        cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
+                (video.url, video.path)
+
+        if debug:
+            cmd = "python fake.py"
+
+        layout = self.ui_download.new_layout()
+        layout.progressBar.setToolTip(video.name)
+
+        self.nb_downloads_in_progress += 1
+        process = DownloadProcess()
+        process.start(cmd)
+
+        download = Download(process, layout)
+        
+        QObject.connect(download, SIGNAL("deleteLayout(object)"), 
+                self.ui_download.deleteLayout)
+
+        QObject.connect(download, SIGNAL("terminated(DownloadProcess, int)"), 
+                self.downloadTerminated)
+
+        self.videos[download] = video
+        self.ui_download.show()
+
+    def downloadTerminated(self, download, exitCode):
+        if exitCode == 0:
+            self.videos[download].save()
+            self.emit(SIGNAL("download_terminated(Video)"), self.videos[download])
+        else:
+            v = self.videos.pop(download)
+
+        self.nb_downloads_in_progress -= 1
+
+        if self.nb_downloads_in_progress < 1:
+            self.ui_download.close()
+
+    def refresh_availables(self, videos):
+        self.ui_listAvailables.refresh(videos)
+
+    def killAll(self):
+        for d in self.videos.keys():
+            d.stop()
+
+            
+class VideoManager(QObject):
+    def __init__(self, listAvailables_ui, fileViewer_ui, config):
+        QObject.__init__(self)
+        self.ui_listAvailables = listAvailables_ui
+        self.ui_fileviewer = fileViewer_ui
+        self.config = config
+        self.refresh_fileviewer(self.config.categories)
+
+        QObject.connect(self.ui_fileviewer, SIGNAL("play(Video)"), 
+                self.play)
+
+    def video_downloaded(self, video):
+        self.ui_listAvailables.remove(video)
+        self.ui_fileviewer.add(video)
+
+    def refresh_fileviewer(self, categories):
+        self.ui_fileviewer.refresh_all(categories)
+
+    def blacklist_selected(self):
+        for v in self.ui_listAvailables.selectedVideos():
+            v.blacklist()
+            self.ui_listAvailables.remove(v)
+            self.config.blacklist.append(v.url)
+
+    def play_selected(self, index=None):
+        v = self.ui_fileviewer.videoSelected()
+        self.play(v)
+
+    def play(self, video):
+        if not video:
+            return
+        playerProcess = PlayerProcess(self.config.player, video)
+        playerProcess.start()
+        video.marked_as_seen(True)
+
+    def marked_as_seen(self, seen=True):
+        video = self.ui_fileviewer.videoSelected()
+        video.marked_as_seen(seen)
+        self.ui_fileviewer.marked_as_seen_selected(seen)
+
+
+class ListAvailables(QListView):
+    def __init__(self, parent=None):
+        QListView.__init__(self, parent)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        self.model = ListAvailablesVideosModel(parent)
+        self.setModel(self.model)
+        
+        QObject.connect(self, SIGNAL("doubleClicked(QModelIndex)"),
+                self.download)
+
+    def clear(self):
+        self.model.tabData = []
+
+    def video(self, row):
+        return self.model.tabData[row]
+
+    def add(self, video):
+        if DAO.video_exist(video):
+            return
+        self.model.add(video)
+
+    def remove(self, video):
+        self.model.remove(video)
+
+    def selectedVideos(self):
+        indexes = self.selectedIndexes()
+        videos = []
+        for i in indexes:
+            v = self.video(i.row())
+            videos.append(v)
+        return videos
+
+    def download(self, index=None):
+        if index and isinstance(index, QModelIndex):
+            video = self.video(index.row())
+            self.emit(SIGNAL("download(Video)"), video)
+        else:
+            for v in self.selectedVideos():
+                self.emit(SIGNAL("download(Video)"), v)
+
+    def refresh(self, liste):
+        self.clear()
+        for item in liste:
+            self.add(item)
+
 class CDL(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        fileviewer = self.ui.fileviewer
 
         self.config = Config()
-        fileviewer.refresh_all(self.config.categories)
 
-        self.wait = Ui_Wait(self)
+        self.ui.wait = Ui_Wait(self)
+        self.downloadManager = DownloadManager(self, self.ui.listAvailables)
+        self.videoManager = VideoManager(self.ui.listAvailables,
+                self.ui.fileviewer, self.config)
 
-        QObject.connect(self.ui.listAvailables, SIGNAL("refresh(PyQt_PyObject)"),
-                self.ui.listAvailables.refresh)
-    	QObject.connect(self.wait, SIGNAL("open()"), self.wait.open)
-    	QObject.connect(self.wait, SIGNAL("close()"), self.wait.close)
-    def find(self):
-        pass
+        QObject.connect(self.downloadManager, SIGNAL("download_terminated(Video)"),
+                self.videoManager.video_downloaded)
+
+        QObject.connect(self, SIGNAL("refresh(PyQt_PyObject)"),
+                self.downloadManager.refresh_availables)
+
+        QObject.connect(self.ui.listAvailables, SIGNAL("download(Video)"),
+                self.downloadManager.download)
+
+    	QObject.connect(self.ui.wait, SIGNAL("open()"), self.ui.wait.open)
+    	QObject.connect(self.ui.wait, SIGNAL("close()"), self.ui.wait.close)
+
+    def showPreferences(self):
+        self.pref = Preferences(self.config, self)
+    	QObject.connect(self.pref, SIGNAL("configChanged(list)"),
+                self.videoManager.refresh_fileviewer)
+        self.pref.show()
+
+    def refresh_availables(self):
+        def threadListNewVideos(self):
+            self.ui.wait.emit(SIGNAL("open()"))
+            liste = get_list_new_videos(self.config)
+            self.emit(SIGNAL("refresh(PyQt_PyObject)"), liste)
+            self.ui.wait.emit(SIGNAL("close()"))
+
+        if self.downloadManager.nb_downloads_in_progress != 0:
+            r = QMessageBox.critical(self, "Veuillez patienter !", 
+                    u"Tous les téléchargements ne sont pas terminés, veuillez patienter quelques instants avant de raffraichir cette liste")
+            return
+
+        threading.Thread(target=threadListNewVideos, args=[self]).start()
+
+    def quit(self):
+        if hasattr(self, 'pref'):
+            self.pref.close()
+        if hasattr(self, 'downloadManager'):
+            self.downloadManager.ui_download.close()
+
+        self.close()
+
+    def closeEvent(self, closeEvent):
+        self.quit()
 
     @pyqtSlot()
     def on_pushButtonRefresh_clicked(self):
-        videos = []
-        if not debug:
-            def threadListNewVideos(self):
-                self.wait.emit(SIGNAL("open()"))
-                liste = get_list_new_videos(self.config)
-                self.ui.listAvailables.emit(SIGNAL("refresh(PyQt_PyObject)"), liste)
-                self.wait.emit(SIGNAL("close()"))
-			
-            videos = threading.Thread(target=threadListNewVideos, args=[self]).start()
-    
-        self.ui.listAvailables.clear()
-        
-        if debug:
-            videos = []
-            for i in range(4):
-                v = get_random_video()
-                videos.append(v)
-
-        #for v in videos:
-        #    self.ui.listAvailables.add(v)
+        self.refresh_availables()
 
     @pyqtSlot()
     def on_pushButtonDownload_clicked(self):
-        self.ui.listAvailables.download()
+        self.downloadManager.download_selected()
+
+    @pyqtSlot()
+    def on_pushButtonPlay_clicked(self):
+        self.videoManager.play_selected()
+
+    @pyqtSlot()
+    def on_pushButtonBlacklist_clicked(self):
+        try:
+            self.videoManager.blacklist_selected()
+        except Exception, e:
+            print "error while blacklisting video"
+            print traceback.format_exc(e)
+
+    @pyqtSlot()
+    def on_pushButtonSeen_clicked(self):
+        self.videoManager.marked_as_seen(True)
+
+    @pyqtSlot()
+    def on_pushButtonNotSeen_clicked(self):
+        self.videoManager.marked_as_seen(False)
+
+    @pyqtSignature("")
+    def on_actionQuit_activated(self):
+        self.quit()
+    
+    @pyqtSignature("")
+    def on_actionPreferences_activated(self):
+        self.showPreferences()
 
 
 if __name__ == "__main__":

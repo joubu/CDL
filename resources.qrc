@@ -1,5 +1,11 @@
 <RCC>
   <qresource prefix="*.png">
+    <file>resources/download.png</file>
+    <file>resources/kblackbox.png</file>
+    <file>resources/reload_all_tabs.png</file>
+    <file>resources/viewmag-.png</file>
+    <file>resources/viewmag+.png</file>
     <file>resources/button_cancel.png</file>
+    <file>resources/video.png</file>
   </qresource>
 </RCC>
