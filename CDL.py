@@ -374,7 +374,6 @@ class Video():
             self.name = name
 
         self.path = os.path.join(self.category.path, self.name)
-        print self.path
 
         if length == None:
             self.length = 0
@@ -612,12 +611,12 @@ class DownloadProcess(QProcess):
         pourcent = 0
         if len(r) > 0:
             pourcent = int(float(r[-1]))
-
-        self.emit(SIGNAL("majDownloadBar(int)"), pourcent)
+        if pourcent >= 0 and pourcent <= 100:
+            self.emit(SIGNAL("majDownloadBar(int)"), pourcent)
 
     def finished(self, exitCode, exitStatus):
         if exitCode == 0 and exitStatus == 0: # Fin normale du process
-            self.emit(SIGNAL("majDownloadBar(int)"), 100)
+            self.emit(SIGNAL("stoppedByEnd()"))
         elif exitCode == 0 and exitStatus == 1: # Arrêt demandé par user
             self.emit(SIGNAL("stoppedByUser()"))
         elif exitCode == 1 and exitStatus == 0: # Reprise après arrêt
@@ -662,17 +661,18 @@ class Download(QObject):
     
         QObject.connect(self.process, SIGNAL("majDownloadBar(int)"),
                 self.majProgressBar)
+        QObject.connect(self.process, SIGNAL("stoppedByEnd()"), 
+                self.stoppedByEnd)
         QObject.connect(self.process, SIGNAL("stoppedByUser()"), 
                 self.stoppedByUser)
         QObject.connect(self.process, SIGNAL("stoppedByError()"),
                 self.stoppedByError)
 
     def majProgressBar(self, pourcent):
-        if pourcent < 100:
-            self.layout.progressBar.setValue(pourcent)
-        else:
-            self.layout.progressBar.setValue(100)
-            self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 0)
+        self.layout.progressBar.setValue(pourcent)
+
+    def stoppedByEnd(self):
+        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 0)
 
     def stoppedByUser(self):
         self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 1)
@@ -718,14 +718,15 @@ class ListAvailablesVideosModel(QAbstractListModel):
         return QVariant(self.tabData[index.row()].name)
 
     def headerData(self, section, orientation, role):
+        """
         if role != Qt.DisplayRole:
             return QVariant()
-        
         if orientation == Qt.Horizontal:
             #return QVariant(self.hHeaderData[section])
             return QVariant()
         elif orientation == Qt.Vertical:
             return QVariant()
+        """
 
         return QVariant()
 
@@ -973,6 +974,7 @@ class DownloadManager(QObject):
             self.emit(SIGNAL("download_terminated(Video)"), self.videos[download])
         else:
             v = self.videos.pop(download)
+            v.rm()            
 
         self.nb_downloads_in_progress -= 1
 
