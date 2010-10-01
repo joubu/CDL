@@ -684,16 +684,6 @@ class Download(QObject):
         if self.process.state() != QProcess.NotRunning:
             self.process.stop()
 
-        lo = self.layout.layout()
-        while True:
-            i=lo.takeAt(0)
-            if i is None : break
-            i.widget().deleteLater()
-            del i
-
-        del lo
-        self.emit(SIGNAL("deleteLayout(object)"), self.layout)
-
 class ListAvailablesVideosModel(QAbstractListModel):
     def __init__(self, parent):
         QAbstractListModel.__init__(self, parent)
@@ -774,6 +764,14 @@ class Ui_DownloadManager(QWidget):
         return downloadLayout
 
     def deleteLayout(self, layout):
+        lo = layout.layout()
+        while True:
+            i=lo.takeAt(0)
+            if i is None : break
+            i.widget().deleteLater()
+            del i
+
+        del lo
         self.verticalLayout.removeItem(layout)
         del layout
 
@@ -959,7 +957,7 @@ class DownloadManager(QObject):
 
         download = Download(process, layout)
         
-        QObject.connect(download, SIGNAL("deleteLayout(object)"), 
+        QObject.connect(self, SIGNAL("deleteLayout(object)"), 
                 self.ui_download.deleteLayout)
 
         QObject.connect(download, SIGNAL("terminated(DownloadProcess, int)"), 
@@ -974,7 +972,9 @@ class DownloadManager(QObject):
             self.emit(SIGNAL("download_terminated(Video)"), self.videos[download])
         else:
             v = self.videos.pop(download)
-            v.rm()            
+            v.rm()
+
+        self.emit(SIGNAL("deleteLayout(object)"), download.layout)
 
         self.nb_downloads_in_progress -= 1
 
