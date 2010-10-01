@@ -486,7 +486,7 @@ class TableViewCategory(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
     def clear(self):
-        self.model.tabData = []
+        self.model.clear()
 
     def add(self, video):
         if DAO.video_exist(video):
@@ -563,17 +563,25 @@ class ListMyVideosModel(QAbstractTableModel):
 
         return QVariant()
 
+    def clear(self):
+        self.removeRows(0, len(self.tabData))
+
+    def removeRows(self, first, last, parent=QModelIndex()):
+        self.beginRemoveRows(parent, first, last)
+        self.tabData[first:last] = []
+        self.endRemoveRows()
+
     def removeColumns(self, position, columns, parent=QModelIndex()):
         self.beginRemoveColumns(parent, position, position + columns - 1)
-        self.hHeaderData[position:position+columns]=[]
+        self.hHeaderData[position:position+columns] = []
         self.endRemoveColumns()
         return True
 
     def add(self, video, parent=QModelIndex()):
-        self.beginInsertRows(parent, 1, 1)
+        self.beginInsertRows(parent, 0, 0)
         self.tabData.append(video)
-        self.tabData = sorted(self.tabData, key=lambda video: video.date)
         self.endInsertRows()
+        self.tabData = sorted(self.tabData, key=lambda video: video.name)
         return True
 
     def remove(self, video, parent=QModelIndex()):
