@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_MainWindow.ui'
 #
-# Created: Thu Oct  7 11:30:38 2010
+# Created: Thu Oct  7 12:17:15 2010
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -285,6 +285,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addWidget(self.pushButtonNotSeen)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem1)
+        self.pushButtonRemove = QtGui.QPushButton(self.tab1)
+        self.pushButtonRemove.setMinimumSize(QtCore.QSize(0, 42))
+        self.pushButtonRemove.setStyleSheet("background-image: url(\":/*.png/resources/button_cancel.png\");\n"
+"background-repeat: no-repeat;\n"
+"background-position: center;")
+        self.pushButtonRemove.setText("")
+        self.pushButtonRemove.setObjectName("pushButtonRemove")
+        self.horizontalLayout_2.addWidget(self.pushButtonRemove)
+        spacerItem2 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem2)
         self.pushButtonPlay = QtGui.QPushButton(self.tab1)
         self.pushButtonPlay.setMinimumSize(QtCore.QSize(0, 42))
         self.pushButtonPlay.setAutoFillBackground(False)
@@ -359,6 +369,7 @@ class Ui_MainWindow(object):
         self.zapping.setTitle(QtGui.QApplication.translate("MainWindow", "Zapping", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonSeen.setToolTip(QtGui.QApplication.translate("MainWindow", "Marquée comme vue", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonNotSeen.setToolTip(QtGui.QApplication.translate("MainWindow", "Marquée comme non vue", None, QtGui.QApplication.UnicodeUTF8))
+        self.pushButtonRemove.setToolTip(QtGui.QApplication.translate("MainWindow", "Supprimer la vidéo sélectionnée", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonPlay.setToolTip(QtGui.QApplication.translate("MainWindow", "Lire la vidéo sélectionnée", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab1), QtGui.QApplication.translate("MainWindow", "Mes vidéos", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFichier.setTitle(QtGui.QApplication.translate("MainWindow", "Fichier", None, QtGui.QApplication.UnicodeUTF8))

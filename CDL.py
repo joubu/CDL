@@ -245,6 +245,13 @@ class DAO:
         db.commit()
 
     @classmethod
+    def remove_video(cls, video):
+        global db
+
+        db.execute("DELETE FROM video WHERE url=?", (video.url,))
+        db.commit()
+
+    @classmethod
     def blacklist_video(cls, video):
         global db
         db.execute("INSERT INTO blacklist(url) VALUES(?)", (video.url,))
@@ -406,8 +413,12 @@ class Video():
         DAO.add_video(self)
 
     def rm(self):
-        if os.path.exists(self.path):
+        try:
             os.remove(self.path)
+        except:
+            pass
+        finally:
+            DAO.remove_video(self)
 
     def blacklist(self):
         DAO.blacklist_video(self)
@@ -487,14 +498,12 @@ class TableViewCategory(QTableView):
         self.model.clear()
 
     def add(self, video):
-        if DAO.video_exist(video):
-            self.model.add(video)
-            self.resizeColumnsToContents() 
-        else:
-            pass # FIXME
+        self.model.add(video)
+        self.resizeColumnsToContents() 
 
     def remove(self, video):
         self.model.remove(video)
+        self.resizeColumnsToContents() 
 
     def currentVideo(self):
         indexes = self.selectedIndexes()
@@ -528,8 +537,6 @@ class ListMyVideosModel(QAbstractTableModel):
         self.scroll = parent.verticalScrollBar()
 
     def rowCount(self, parent):
-        print len(self.tabData)
-        print self.scroll.maximum()
         return len(self.tabData)
 
     def columnCount(self, parent):
@@ -571,7 +578,7 @@ class ListMyVideosModel(QAbstractTableModel):
 
     def removeRows(self, position, rows, parent=QModelIndex()):
         self.beginRemoveRows(parent, position, position + rows - 1)
-        self.tabData[position:position+rows] = []
+        self.vHeaderData[position:position+rows] = []
         self.endRemoveRows()
         return True
 
@@ -585,7 +592,11 @@ class ListMyVideosModel(QAbstractTableModel):
         self.insertRows(0, 1)
         self.tabData.append(video)
         self.sort(0)
-        return True
+
+    def remove(self, video):
+        i = self.tabData.index(video)
+        self.removeRows(i, 1)
+        self.tabData.remove(video)
 
 
 class CategoryGroupBox(QGroupBox):
@@ -640,6 +651,7 @@ class DownloadHLayout(QHBoxLayout):
         self.pushButton = pushButton
 
         self.progressBar.setProperty("value", 0)
+        self.pushButton.setMinimumSize(QSize(0, 42))
         self.pushButton.setStyleSheet(
                 "background-image: url(\":/*.png/resources/button_cancel.png\");\n"
                 "background-repeat: no-repeat;\n"
@@ -895,6 +907,13 @@ class FileViewer(QFrame):
             return
         catTV[0].add(video)
 
+    def remove(self, video):
+        categoryGB = self.findChild(CategoryGroupBox, video.category.name)
+        catTV = categoryGB.findChildren(TableViewCategory)
+        if len(catTV) == 0:
+            return
+        catTV[0].remove(video)
+
     def videoSelected(self):
         if self.currentSelection == None:
             return None
@@ -1012,6 +1031,12 @@ class VideoManager(QObject):
         playerProcess = PlayerProcess(self.config.player, video)
         playerProcess.start()
         video.marked_as_seen(True)
+
+    def remove_selected(self):
+        v = self.ui_fileviewer.videoSelected()
+        if v:
+            v.rm()
+            self.ui_fileviewer.remove(v)
 
     def marked_as_seen(self, seen=True):
         video = self.ui_fileviewer.videoSelected()
@@ -1148,6 +1173,10 @@ class CDL(QMainWindow):
     @pyqtSlot()
     def on_pushButtonNotSeen_clicked(self):
         self.videoManager.marked_as_seen(False)
+
+    @pyqtSignature("")
+    def on_pushButtonRemove_clicked(self):
+        self.videoManager.remove_selected()
 
     @pyqtSignature("")
     def on_actionQuit_activated(self):
