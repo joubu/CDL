@@ -162,12 +162,6 @@ class Config:
             c.videos = DAO.videos(c)
         self.blacklist = DAO.blacklist()
 
-    
-
-    def path(self, category):
-        #FIXME GET PATH IN BDD
-        return os.path.join(self.dir_user)
-
     def save(self):
         DAO.save_config(self)
     
@@ -367,7 +361,12 @@ class Video():
             filename = url.split('/')[-1]
             try:
                 matches = re.compile("(.*)_CAN_([0-9]*)_video_H\.flv").findall(filename)
-                self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
+                if len(matches) > 0:
+                    self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
+                else:
+                    matches = re.compile("(.*)_([0-9]*)_AUTO_.*_video_H\.flv").findall(filename)
+                    self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
+                    
             except:
                 self.name = filename
         else:
@@ -717,16 +716,6 @@ class ListAvailablesVideosModel(QAbstractListModel):
         return QVariant(self.tabData[index.row()].name)
 
     def headerData(self, section, orientation, role):
-        """
-        if role != Qt.DisplayRole:
-            return QVariant()
-        if orientation == Qt.Horizontal:
-            #return QVariant(self.hHeaderData[section])
-            return QVariant()
-        elif orientation == Qt.Vertical:
-            return QVariant()
-        """
-
         return QVariant()
 
     def removeColumns(self, position, columns, parent=QModelIndex()):

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_MainWindow.ui'
 #
-# Created: Tue Sep 28 15:08:13 2010
+# Created: Thu Oct  7 09:43:57 2010
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -71,7 +71,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtGui.QWidget(self.scrollArea)
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 742, 3402))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 247, 3402))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setMargin(0)
@@ -337,7 +337,7 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
+        MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "c+dl", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonBlacklist.setToolTip(QtGui.QApplication.translate("MainWindow", "Blacklister les vidéos sélectionnées.\n"
 "Elles ne réapparaitront plus dans cette liste", None, QtGui.QApplication.UnicodeUTF8))
         self.pushButtonRefresh.setToolTip(QtGui.QApplication.translate("MainWindow", "Rafraichir la liste des nouvelles vidéos disponibles", None, QtGui.QApplication.UnicodeUTF8))
