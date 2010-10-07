@@ -525,8 +525,11 @@ class ListMyVideosModel(QAbstractTableModel):
         self.hHeaderData = ["Name", "Date", "Length", "Seen"]
         self.vHeaderData = []
         self.tabData = []
+        self.scroll = parent.verticalScrollBar()
 
     def rowCount(self, parent):
+        print len(self.tabData)
+        print self.scroll.maximum()
         return len(self.tabData)
 
     def columnCount(self, parent):
@@ -564,32 +567,25 @@ class ListMyVideosModel(QAbstractTableModel):
 
     def clear(self):
         self.removeRows(0, len(self.tabData))
+        self.tabData = []
 
-    def removeRows(self, first, last, parent=QModelIndex()):
-        self.beginRemoveRows(parent, first, last)
-        self.tabData[first:last] = []
+    def removeRows(self, position, rows, parent=QModelIndex()):
+        self.beginRemoveRows(parent, position, position + rows - 1)
+        self.tabData[position:position+rows] = []
         self.endRemoveRows()
-
-    def removeColumns(self, position, columns, parent=QModelIndex()):
-        self.beginRemoveColumns(parent, position, position + columns - 1)
-        self.hHeaderData[position:position+columns] = []
-        self.endRemoveColumns()
         return True
 
-    def add(self, video, parent=QModelIndex()):
-        self.beginInsertRows(parent, 0, 0)
-        self.tabData.append(video)
+    def insertRows(self, position, rows, parent=QModelIndex()):
+        self.beginInsertRows(parent, position, position + rows - 1)
+        self.vHeaderData.append(len(self.tabData))
         self.endInsertRows()
-        self.tabData = sorted(self.tabData, key=lambda video: video.name)
         return True
 
-    def remove(self, video, parent=QModelIndex()):
-        self.beginRemoveRows(parent, 0, len(self.tabData))
-        self.tabData.pop(self.tabData.index(video))
-        self.endRemoveRows()
+    def add(self, video):
+        self.insertRows(0, 1)
+        self.tabData.append(video)
+        self.sort(0)
         return True
-
-
 
 
 class CategoryGroupBox(QGroupBox):
@@ -718,17 +714,12 @@ class ListAvailablesVideosModel(QAbstractListModel):
     def headerData(self, section, orientation, role):
         return QVariant()
 
-    def removeColumns(self, position, columns, parent=QModelIndex()):
-        self.beginRemoveColumns(parent, position, position + columns - 1)
-        self.hHeaderData[position:position+columns] = []
-        self.endRemoveColumns()
-        return True
-
     def add(self, video, parent=QModelIndex()):
         self.beginInsertRows(parent, 0, 0)
         self.tabData.append(video)
-        self.tabData = sorted(self.tabData, key=lambda video: video.name)
         self.endInsertRows()
+        #self.tabData = sorted(self.tabData, key=lambda video: video.name)
+        #self.sort(0)
         return True
 
     def remove(self, video, parent=QModelIndex()):
