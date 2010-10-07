@@ -475,7 +475,6 @@ class TableViewCategory(QTableView):
         vh.setVisible(False)
         hh = self.horizontalHeader()
         hh.setMovable(True)
-        #hh.setResizeMode(QHeaderView.Stretch)
         hh.setResizeMode(QHeaderView.ResizeToContents)
         hh.setVisible(True)
         self.resizeColumnsToContents() 
@@ -491,6 +490,7 @@ class TableViewCategory(QTableView):
     def add(self, video):
         if DAO.video_exist(video):
             self.model.add(video)
+            self.resizeColumnsToContents() 
         else:
             pass # FIXME
 
@@ -616,7 +616,7 @@ class DownloadProcess(QProcess):
     def tryReadPourcent(self):
         line = self.readAll()
         r = re.findall("(\d{1,3}\.{0,1}\d{0,1})%", line)
-        pourcent = 0
+        pourcent = None
         if len(r) > 0:
             pourcent = int(float(r[-1]))
         if pourcent >= 0 and pourcent <= 100:
@@ -630,6 +630,7 @@ class DownloadProcess(QProcess):
         elif exitCode == 1 and exitStatus == 0: # Reprise après arrêt
             self.emit(SIGNAL("stoppedByError()"))
         else:
+            self.emit(SIGNAL("stoppedByError()"))
             print "?????????????????"
             print "exit code=%s exitStatus=%s" % (exitCode, exitStatus)
             print "?????????????????"
@@ -730,12 +731,12 @@ class ListAvailablesVideosModel(QAbstractListModel):
 
     def removeColumns(self, position, columns, parent=QModelIndex()):
         self.beginRemoveColumns(parent, position, position + columns - 1)
-        self.hHeaderData[position:position+columns]=[]
+        self.hHeaderData[position:position+columns] = []
         self.endRemoveColumns()
         return True
 
     def add(self, video, parent=QModelIndex()):
-        self.beginInsertRows(parent, 1, 0)
+        self.beginInsertRows(parent, 0, 0)
         self.tabData.append(video)
         self.tabData = sorted(self.tabData, key=lambda video: video.name)
         self.endInsertRows()
@@ -888,9 +889,9 @@ class FileViewer(QFrame):
             QObject.connect(listCategory, SIGNAL("selectionChanged(TableViewCategory)"), 
                     self.selectionChanged)
 
-            QObject.disconnect(listCategory, SIGNAL("doubleClicked(QModelIndex)"),
+            QObject.disconnect(listCategory, SIGNAL("activated(QModelIndex)"),
                     self.play_requested)
-            QObject.connect(listCategory, SIGNAL("doubleClicked(QModelIndex)"),
+            QObject.connect(listCategory, SIGNAL("activated(QModelIndex)"),
                     self.play_requested)
 
 
@@ -1046,7 +1047,7 @@ class ListAvailables(QListView):
         self.model = ListAvailablesVideosModel(parent)
         self.setModel(self.model)
         
-        QObject.connect(self, SIGNAL("doubleClicked(QModelIndex)"),
+        QObject.connect(self, SIGNAL("activated(QModelIndex)"),
                 self.download)
 
     def clear(self):

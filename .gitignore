@@ -2,4 +2,4 @@
 *.swp
 *.pyc
 *.new
-data/*
+database.db
