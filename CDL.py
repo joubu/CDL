@@ -1,14 +1,6 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 
-
-
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from Ui_MainWindow import Ui_MainWindow
-from Ui_Preferences import Ui_Preferences
-import resources_rc
-from xml.dom import minidom
 import urllib
 import sys
 import os
@@ -22,6 +14,9 @@ import subprocess
 import threading
 import signal
 
+from xml.dom import minidom
+from operator import attrgetter
+
 import pygst
 pygst.require("0.10")
 import gst
@@ -33,6 +28,12 @@ try:
 except Exception, e:
     print e
     exit(1)
+
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+from Ui_MainWindow import Ui_MainWindow
+from Ui_Preferences import Ui_Preferences
+import resources_rc
 
 debug = False
 #debug = True
@@ -371,8 +372,9 @@ class Video():
                 if len(matches) > 0:
                     self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
                 else:
-                    matches = re.compile("(.*)_([0-9]*)_AUTO_.*_video_H\.flv").findall(filename)
-                    self.name = "%s_%s.flv" % (matches[0][0], matches[0][1])
+                    matches = re.compile("(.*)_([0-9]*)_AUTO_([0-9]*)_.*_video_H\.flv").findall(filename)
+                    self.name = "%s_%s_%s.flv" % (matches[0][0], matches[0][1],
+                            matches[0][2])
                     
             except:
                 self.name = filename
@@ -406,7 +408,8 @@ class Video():
 
 
     def __repr__(self):
-        return u"Video [%s] %s\t%s" % (self.category, self.url, self.date)
+        #return u"Video [%s] %s\t%s" % (self.category, self.url, self.date)
+        return u"Video %s" % (self.name)
 
     def save(self):
         self.length = self.get_length()
@@ -493,6 +496,7 @@ class TableViewCategory(QTableView):
 
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSortingEnabled(True)
 
     def clear(self):
         self.model.clear()
@@ -535,6 +539,13 @@ class ListMyVideosModel(QAbstractTableModel):
         self.vHeaderData = []
         self.tabData = []
         self.scroll = parent.verticalScrollBar()
+        self.sort_map = {
+                0: 'name',
+                1: 'date',
+                2: 'length',
+                3: 'seen'}
+        self.sorting_column = 0
+
 
     def rowCount(self, parent):
         return len(self.tabData)
@@ -588,10 +599,17 @@ class ListMyVideosModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
+    def sort(self, column, order = Qt.AscendingOrder):
+        self.emit(SIGNAL("layoutAboutToBeChanged()"))
+        self.tabData = sorted(self.tabData, key=attrgetter(self.sort_map[column]))
+        if order == Qt.DescendingOrder:
+            self.tabData.reverse()
+        self.emit(SIGNAL("layoutChanged()"))
+
     def add(self, video):
         self.insertRows(0, 1)
         self.tabData.append(video)
-        self.sort(0)
+        self.sort(self.sorting_column)
 
     def remove(self, video):
         i = self.tabData.index(video)
@@ -602,7 +620,6 @@ class ListMyVideosModel(QAbstractTableModel):
 class CategoryGroupBox(QGroupBox):
     def __init__(self, parent=None):
         QGroupBox.__init__(self, parent)
-        #self.setFlat(False)
         self.setCheckable(True)
         self.setChecked(True)
 
@@ -730,8 +747,6 @@ class ListAvailablesVideosModel(QAbstractListModel):
         self.beginInsertRows(parent, 0, 0)
         self.tabData.append(video)
         self.endInsertRows()
-        #self.tabData = sorted(self.tabData, key=lambda video: video.name)
-        #self.sort(0)
         return True
 
     def remove(self, video, parent=QModelIndex()):
