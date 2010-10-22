@@ -28,7 +28,7 @@
         <item row="0" column="0">
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="ListAvailables" name="listAvailables"/>
+           <widget class="DownloadsList" name="downloadsList"/>
           </item>
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -146,7 +146,7 @@ background-position: center;</string>
              <number>0</number>
             </property>
             <item row="0" column="0">
-             <widget class="FileViewer" name="fileviewer">
+             <widget class="CategoriesList" name="categoriesList">
               <property name="frameShape">
                <enum>QFrame::StyledPanel</enum>
               </property>
@@ -167,7 +167,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_14">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_discrete">
+                   <widget class="VideosList" name="list_discrete">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -204,7 +204,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_15">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_boite">
+                   <widget class="VideosList" name="list_boite">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -235,7 +235,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_3">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_boucan">
+                   <widget class="VideosList" name="list_boucan">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -263,7 +263,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_4">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_grand">
+                   <widget class="VideosList" name="list_grand">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -294,7 +294,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_16">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_guignols">
+                   <widget class="VideosList" name="list_guignols">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -325,7 +325,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_17">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_groland">
+                   <widget class="VideosList" name="list_groland">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -350,7 +350,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_5">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_matinale">
+                   <widget class="VideosList" name="list_matinale">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -381,7 +381,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_18">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_meteo">
+                   <widget class="VideosList" name="list_meteo">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -412,7 +412,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_2">
                   <item>
-                   <widget class="TableViewCategory" name="tableView_petit">
+                   <widget class="VideosList" name="list_petit">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -443,7 +443,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_20">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_petite">
+                   <widget class="VideosList" name="list_petite">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -474,7 +474,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_21">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_pepites">
+                   <widget class="VideosList" name="list_pepites">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -505,7 +505,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_22">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_salut">
+                   <widget class="VideosList" name="list_salut">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -536,7 +536,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_23">
                   <item row="0" column="0">
-                   <widget class="TableViewCategory" name="tableView_sav">
+                   <widget class="VideosList" name="list_sav">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -567,7 +567,7 @@ background-position: center;</string>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_5">
                   <item>
-                   <widget class="TableViewCategory" name="tableView_zapping">
+                   <widget class="VideosList" name="list_zapping">
                     <property name="minimumSize">
                      <size>
                       <width>0</width>
@@ -759,20 +759,20 @@ background-position: center;</string>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>ListAvailables</class>
+   <class>DownloadsList</class>
    <extends>QListView</extends>
    <header>CDL</header>
   </customwidget>
   <customwidget>
-   <class>TableViewCategory</class>
-   <extends>QTableView</extends>
-   <header>CDL</header>
-  </customwidget>
-  <customwidget>
-   <class>FileViewer</class>
+   <class>CategoriesList</class>
    <extends>QFrame</extends>
    <header>CDL</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VideosList</class>
+   <extends>QTableView</extends>
+   <header>Video</header>
   </customwidget>
  </customwidgets>
  <resources>
@@ -782,7 +782,7 @@ background-position: center;</string>
   <connection>
    <sender>boite</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_boite</receiver>
+   <receiver>list_boite</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -798,7 +798,7 @@ background-position: center;</string>
   <connection>
    <sender>discrete</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_discrete</receiver>
+   <receiver>list_discrete</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -814,7 +814,7 @@ background-position: center;</string>
   <connection>
    <sender>groland</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_groland</receiver>
+   <receiver>list_groland</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -830,7 +830,7 @@ background-position: center;</string>
   <connection>
    <sender>guignols</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_guignols</receiver>
+   <receiver>list_guignols</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -846,7 +846,7 @@ background-position: center;</string>
   <connection>
    <sender>meteo</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_meteo</receiver>
+   <receiver>list_meteo</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -862,7 +862,7 @@ background-position: center;</string>
   <connection>
    <sender>pepites</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_pepites</receiver>
+   <receiver>list_pepites</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -878,7 +878,7 @@ background-position: center;</string>
   <connection>
    <sender>zapping</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_zapping</receiver>
+   <receiver>list_zapping</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -894,7 +894,7 @@ background-position: center;</string>
   <connection>
    <sender>sav</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_sav</receiver>
+   <receiver>list_sav</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -910,7 +910,7 @@ background-position: center;</string>
   <connection>
    <sender>petit</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_petit</receiver>
+   <receiver>list_petit</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -926,7 +926,7 @@ background-position: center;</string>
   <connection>
    <sender>petite</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_petite</receiver>
+   <receiver>list_petite</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -942,7 +942,7 @@ background-position: center;</string>
   <connection>
    <sender>salut</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_salut</receiver>
+   <receiver>list_salut</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -958,7 +958,7 @@ background-position: center;</string>
   <connection>
    <sender>boucan</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_boucan</receiver>
+   <receiver>list_boucan</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -974,7 +974,7 @@ background-position: center;</string>
   <connection>
    <sender>grand</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_grand</receiver>
+   <receiver>list_grand</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -990,7 +990,7 @@ background-position: center;</string>
   <connection>
    <sender>matinale</sender>
    <signal>toggled(bool)</signal>
-   <receiver>tableView_matinale</receiver>
+   <receiver>list_matinale</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
