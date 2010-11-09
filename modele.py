@@ -49,7 +49,6 @@ class Category(Entity):
     def find_new_videos_availables(self, blacklist=list()):
         list_dict = []
         url_blacklist = [d.url for d in blacklist]
-        print url_blacklist
         dom = minidom.parse(urllib.urlopen(self.url))
         video_node = dom.getElementsByTagName('VIDEO')
         for vn in video_node:
@@ -185,7 +184,7 @@ class Video(Entity):
         except:
             pass
         finally:
-            DAO.remove_video(self)
+            self.delete()
 
     def marked_as_seen(self, seen):
         self.seen = seen

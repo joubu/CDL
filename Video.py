@@ -312,7 +312,6 @@ class PlayerProcess(QProcess):
     def __init__(self, player, video, parent=None):
         QProcess.__init__(self, parent)
         self.cmd = "%s %s" % (player, video.path)
-        print self.cmd
 
     def start(self):
         self.startDetached(self.cmd)

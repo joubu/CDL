@@ -61,10 +61,7 @@ class DownloadProcess(QProcess):
         elif exitCode == 1 and exitStatus == 0: # Reprise après arrêt
             self.emit(SIGNAL("stoppedByError()"))
         else:
-            self.emit(SIGNAL("stoppedByError()"))
-            print "?????????????????"
-            print "exit code=%s exitStatus=%s" % (exitCode, exitStatus)
-            print "?????????????????"
+            self.emit(SIGNAL("stoppedByError()")) # Blocage pendant le téléchargement
 
     def stop(self):
         self.kill()
@@ -94,8 +91,8 @@ class DownloadManager(QObject):
         self.process = DownloadProcess()
         self.layout = layout
         self.download = download
-        self.begin_size = None
-        self.begin_time = None
+        self.prev_size = None
+        self.prev_time = None
         QObject.connect(self.layout.pushButton, SIGNAL("clicked()"), 
                 self.stop)
     
@@ -109,11 +106,17 @@ class DownloadManager(QObject):
                 self.stoppedByError)
 
     def majProgressBar(self, pourcent, size):
-        if not self.begin_size:
-            self.begin_size = size
-        rate = (size - self.begin_size) / (time.time() - self.begin_time)
+        if not self.prev_size:
+            self.prev_size = size
+        if not self.prev_time:
+            self.prev_time = time.time()
+        
+        rate = (size - self.prev_size) / (time.time() - self.prev_time)
         self.layout.progressBar.setFormat(self.download.name + " %p% (" + "%.1f" % rate + " ko/s)")
         self.layout.progressBar.setValue(pourcent)
+
+        self.prev_size = size
+        self.prev_time = time.time()
 
     def stoppedByEnd(self):
         self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 0)
@@ -128,7 +131,6 @@ class DownloadManager(QObject):
         cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
                 (self.download.url, self.download.path)
         
-        self.begin_time = time.time()
         self.process.start(cmd)
 
     def stop(self):
@@ -153,6 +155,7 @@ class DownloadsModel(QAbstractListModel):
         return 1
 
     def clear(self):
+        DAO.commit()
         for i in xrange(len(self.datas)):
             self.remove(self.datas[-1])
         DAO.commit()
@@ -173,6 +176,7 @@ class DownloadsModel(QAbstractListModel):
     def add(self, download, parent=QModelIndex()):
         if not DAO.already_downloaded(download.url):
             self.beginInsertRows(parent, 0, 0)
+            download = DAO.merge(download)
             self.datas.append(download)
             self.endInsertRows()
             return True
@@ -180,9 +184,9 @@ class DownloadsModel(QAbstractListModel):
     def remove(self, download, delete=True, parent=QModelIndex()):
         self.beginRemoveRows(parent, 0, len(self.datas))
         self.datas.pop(self.datas.index(download))
+        self.endRemoveRows()
         if delete:
             download.delete()
-        self.endRemoveRows()
         return True
 
 
@@ -271,7 +275,6 @@ class DownloadsList(QListView):
         for download in downloads:
             self.model.add(download)
         DAO.commit()
-        # FIXME FAIRE UN SET DATA plutôt que d'ajouter 1 à 1 chaque download
 
 
 

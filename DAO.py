@@ -81,12 +81,10 @@ class DAO(object):
             from modele import Download, Config
             url_blacklist = [e.url for e in 
                     session.query(Config).first().blacklist]
-            print url_blacklist
                         
             return session.query(Download).filter(
                     not_(Download.url.in_(url_blacklist))).all()
         except Exception, e:
-            print e
             return None
 
     @classmethod
