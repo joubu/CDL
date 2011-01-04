@@ -165,13 +165,13 @@ class CDL(QMainWindow):
     def generate_downloads(self, list_data):
         downloads = []
         for d in list_data:
-            download = DAO.download(d['url'], d['category'], d['date'])
+            download = DAO.download(d['url'], d['category'], d['description'])
             downloads.append(download)
         self.emit(SIGNAL("refresh(PyQt_PyObject)"), downloads)
 
     def add_video(self, download):
-        new_video = Video(download.url, download.category, download.name,
-                download.date)
+        new_video = Video(download.url, download.category, 
+                download.name, download.date, download.description)
         self.videosManager.add_new_video(new_video)
 
 

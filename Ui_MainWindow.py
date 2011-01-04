@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_MainWindow.ui'
 #
-# Created: Fri Oct 22 18:59:53 2010
+# Created: Tue Jan  4 17:47:21 2011
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -286,6 +286,7 @@ class Ui_MainWindow(object):
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem1)
         self.pushButtonRemove = QtGui.QPushButton(self.tab1)
+        self.pushButtonRemove.setEnabled(False)
         self.pushButtonRemove.setMinimumSize(QtCore.QSize(0, 42))
         self.pushButtonRemove.setStyleSheet("background-image: url(\":/*.png/resources/button_cancel.png\");\n"
 "background-repeat: no-repeat;\n"

@@ -68,13 +68,13 @@ class DAO(object):
             return None
 
     @classmethod
-    def download(cls, url, category, date):
+    def download(cls, url, category, description):
         from modele import Download
         try:
             download = session.query(Download).filter(Download.url==unicode(url)).one()
             return download
         except:
-            return Download(url, category, date)
+            return Download(url, category, description)
     @classmethod
     def downloads(cls):
         try:
@@ -144,30 +144,31 @@ class DAO(object):
     def reload_config(cls):
         from modele import Config, Category
         dir_user = unicode(os.path.join(os.path.expanduser("~"), 'Canal+DL'))
-        url_dl = u'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/search/'
+        url_dl_show = u'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/getMEAs/'
+        url_dl_videos = u'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/getVideos/'
         player = u'vlc'
 
-        c = Config(dir_user, url_dl, player)
-        name_keywords = {
-                u"discrete": u"action+discrete",
-                 u"boite": u"boite+question", 
-                 u"boucan": u"boucan",
-                 u"guignols": u"les+guignols", 
-                 u"grand": u"grand+journal",
-                 u"groland": u"groland", 
-                 u"petit": u"petit+journal",
-                 u"petite": u"petite+semaine", 
-                 u"matinale": u"la+matinale",
-                 u"meteo": u"la+meteo", 
-                 u"pepites": u"pepites+net",
-                 u"sav": u"sav", 
-                 u"salut": u"salut+les+terriens", 
-                 u"zapping": u"zapping"
+        c = Config(dir_user, url_dl_show, url_dl_videos, player)
+        name_number = {
+                 u"discrete": "304",
+                 u"boite":    "0", 
+                 u"boucan":   "62",
+                 u"guignols": "48", 
+                 u"grand":    "104",
+                 u"groland":  "254", 
+                 u"petit":    "249",
+                 u"petite":   "0", 
+                 u"matinale": "0",
+                 u"meteo":    "0", 
+                 u"pepites":  "47",
+                 u"sav":      "252", 
+                 u"salut":    "41", 
+                 u"zapping":  "201"
                  }
-        for k, v in name_keywords.iteritems():
+        for k, v in name_number.iteritems():
             c.categories_availables.append(
-                    Category(k, url_dl, dir_user, v, create_path=False)
-                    )
+                Category(k, url_dl_show, dir_user, v, create_path=False)
+            )
 
         petit = session.query(Category).filter(Category.name==u'petit').first()
         zapping = session.query(Category).filter(Category.name==u'zapping').first()

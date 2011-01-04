@@ -75,7 +75,7 @@ class VideosList(QTableView):
         v = self.model.datas[index.row()]
         v.marked_as_seen(seen)
         
-        index = self.model.createIndex(index.row(), 3) # FIXME BURK !
+        index = self.model.createIndex(index.row(), 3)
         self.model.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index) 
 
     def currentChanged(self, i, j):
@@ -106,7 +106,7 @@ class VideosModel(QAbstractTableModel):
         if not index.isValid(): 
             return QVariant()
         elif role == Qt.ToolTipRole:
-            return QVariant()
+            return QString(self.datas[index.row()].description)
         elif role == Qt.DisplayRole:
             if index.column() == 0:
                 return QString(self.datas[index.row()].name)
