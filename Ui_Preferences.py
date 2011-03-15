@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_Preferences.ui'
 #
-# Created: Tue Sep 28 15:10:24 2010
+# Created: Tue Mar 15 21:59:27 2011
 #      by: PyQt4 UI code generator 4.7.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -44,12 +44,15 @@ class Ui_Preferences(object):
         self.gridLayout_2 = QtGui.QGridLayout(self.frame_2)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.discrete = QtGui.QCheckBox(self.frame_2)
+        self.discrete.setEnabled(False)
         self.discrete.setObjectName("discrete")
         self.gridLayout_2.addWidget(self.discrete, 0, 0, 1, 1)
         self.meteo = QtGui.QCheckBox(self.frame_2)
+        self.meteo.setEnabled(False)
         self.meteo.setObjectName("meteo")
         self.gridLayout_2.addWidget(self.meteo, 0, 1, 1, 1)
         self.boite = QtGui.QCheckBox(self.frame_2)
+        self.boite.setEnabled(False)
         self.boite.setObjectName("boite")
         self.gridLayout_2.addWidget(self.boite, 1, 0, 1, 1)
         self.petit = QtGui.QCheckBox(self.frame_2)
@@ -59,6 +62,7 @@ class Ui_Preferences(object):
         self.boucan.setObjectName("boucan")
         self.gridLayout_2.addWidget(self.boucan, 2, 0, 1, 1)
         self.petite = QtGui.QCheckBox(self.frame_2)
+        self.petite.setEnabled(False)
         self.petite.setObjectName("petite")
         self.gridLayout_2.addWidget(self.petite, 2, 1, 1, 1)
         self.pepites = QtGui.QCheckBox(self.frame_2)
@@ -74,9 +78,11 @@ class Ui_Preferences(object):
         self.groland.setObjectName("groland")
         self.gridLayout_2.addWidget(self.groland, 5, 0, 1, 1)
         self.matinale = QtGui.QCheckBox(self.frame_2)
+        self.matinale.setEnabled(False)
         self.matinale.setObjectName("matinale")
         self.gridLayout_2.addWidget(self.matinale, 6, 0, 1, 1)
         self.salut = QtGui.QCheckBox(self.frame_2)
+        self.salut.setEnabled(False)
         self.salut.setObjectName("salut")
         self.gridLayout_2.addWidget(self.salut, 4, 1, 1, 1)
         self.sav = QtGui.QCheckBox(self.frame_2)

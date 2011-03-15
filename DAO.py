@@ -150,7 +150,7 @@ class DAO(object):
 
         c = Config(dir_user, url_dl_show, url_dl_videos, player)
         name_number = {
-                 u"discrete": "304",
+                 u"discrete": "0",
                  u"boite":    "0", 
                  u"boucan":   "62",
                  u"guignols": "48", 
@@ -162,7 +162,7 @@ class DAO(object):
                  u"meteo":    "0", 
                  u"pepites":  "47",
                  u"sav":      "252", 
-                 u"salut":    "41", 
+                 u"salut":    "0", 
                  u"zapping":  "201"
                  }
         for k, v in name_number.iteritems():

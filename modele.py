@@ -11,7 +11,7 @@ from elixir import using_options
 from xml.dom import minidom
 import urllib
 
-from DAO import DAO, session
+from DAO import DAO
 
 
 
@@ -197,3 +197,4 @@ class Video(Entity):
 
     def marked_as_seen(self, seen):
         self.seen = seen
+        DAO.commit()

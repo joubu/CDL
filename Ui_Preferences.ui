@@ -65,6 +65,9 @@
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
          <widget class="QCheckBox" name="discrete">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Action discrète</string>
           </property>
@@ -72,6 +75,9 @@
         </item>
         <item row="0" column="1">
          <widget class="QCheckBox" name="meteo">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Météo</string>
           </property>
@@ -79,6 +85,9 @@
         </item>
         <item row="1" column="0">
          <widget class="QCheckBox" name="boite">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Boite à questions</string>
           </property>
@@ -100,6 +109,9 @@
         </item>
         <item row="2" column="1">
          <widget class="QCheckBox" name="petite">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Petite semaine</string>
           </property>
@@ -135,6 +147,9 @@
         </item>
         <item row="6" column="0">
          <widget class="QCheckBox" name="matinale">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Matinale</string>
           </property>
@@ -142,6 +157,9 @@
         </item>
         <item row="4" column="1">
          <widget class="QCheckBox" name="salut">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>SLT</string>
           </property>
