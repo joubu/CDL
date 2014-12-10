@@ -10,6 +10,7 @@ from elixir import metadata, session
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import not_
+
 # Emplacement du fichier
 WORKING_DIR = os.path.dirname(__file__)
 
@@ -68,13 +69,13 @@ class DAO(object):
             return None
 
     @classmethod
-    def download(cls, url, category, description):
+    def download(cls, url, category, description, name):
         from modele import Download
         try:
             download = session.query(Download).filter(Download.url==unicode(url)).one()
             return download
         except:
-            return Download(url, category, description)
+            return Download(url, category, name, description)
     @classmethod
     def downloads(cls):
         try:
@@ -123,12 +124,9 @@ class DAO(object):
 
     @classmethod
     def player(cls):
-        try:
-            from modele import Config
-            config = session.query(Config).all()[-1]
-            return config.player
-        except:
-            return None # On ne doit pas se trouver ici, il doit toujours y avoir une config
+        from modele import Config
+        config = session.query(Config).all()[-1]
+        return config.player
 
     @classmethod
     def config(cls):
@@ -143,31 +141,29 @@ class DAO(object):
     @classmethod
     def reload_config(cls):
         from modele import Config, Category
-        dir_user = unicode(os.path.join(os.path.expanduser("~"), 'Canal+DL'))
-        url_dl_show = u'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/getMEAs/'
-        url_dl_videos = u'http://www.canalplus.fr/rest/bootstrap.php?/bigplayer/getVideos/'
+        dir_user = unicode(os.path.join(os.path.expanduser("~"), 'Canal_DL'))
         player = u'vlc'
 
-        c = Config(dir_user, url_dl_show, url_dl_videos, player)
-        name_number = {
-                 u"discrete": "0",
-                 u"boite":    "0", 
-                 u"boucan":   "62",
-                 u"guignols": "48", 
-                 u"grand":    "104",
-                 u"groland":  "254", 
-                 u"petit":    "249",
-                 u"petite":   "0", 
-                 u"matinale": "0",
-                 u"meteo":    "0", 
-                 u"pepites":  "47",
-                 u"sav":      "252", 
-                 u"salut":    "0", 
-                 u"zapping":  "201"
-                 }
-        for k, v in name_number.iteritems():
+        c = Config(dir_user, player)
+        base_url_1 = u"http://service.canal-plus.com/video/rest/search/cplus/"
+        base_url_2 = u"http://service.canal-plus.com/video/rest/getMEAs/cplus/"
+        categories = {
+                 "pepites": { "code": u"PEPITES_SUR_LE_NET", "url": base_url_1 + u"pepites"},
+                 "guignols": { "code": u"LES_GUIGNOLS", "url":  base_url_1 + u"guignols"},
+                 "grand": { "code": u"LE_GRAND_JOURNAL", "url":  base_url_2 + u"39"},
+                 "groland": { "code": u"GROLAND", "url": base_url_2 + u"130"},
+                 "petit": { "code": u"LE_PETIT_JOURNAL", "url": base_url_1 + u"petit"},
+                 "jt": { "code": u"LE.JT.DE.CANAL", "url": base_url_2 + u"39"},
+                 "explorateurs": { "code": u"LES_NOUVEAUX_EXPLORATEURS", "url": base_url_1 + u"LES_NOUVEAUX_EXPLORATEURS"},
+                 "supplement": { "code": u"LE_SUPPLEMENT", "url": base_url_2 + u"1080"},
+                 "links": { "code": u"L_OEIL_DE_LINKS", "url": base_url_1 + u"L_OEIL_DE_LINKS"},
+                 "salut": { "code": u"SALUT_LES_TERRIENS", "url": base_url_1 + u"SALUT_LES_TERRIENS"},
+                 "zapping": { "code": u"ZAPPING", "url": base_url_2 + u"39"}
+                }
+
+        for k, v in categories.iteritems():
             c.categories_availables.append(
-                Category(k, url_dl_show, dir_user, v, create_path=False)
+                Category(k, dir_user, v['code'], v['url'], create_path=True)
             )
 
         petit = session.query(Category).filter(Category.name==u'petit').first()
@@ -178,4 +174,3 @@ class DAO(object):
         cls.commit()
 
         return c
-        

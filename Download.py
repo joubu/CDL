@@ -26,6 +26,7 @@ from modele import Download
 from DAO import DAO
 
 debug = False
+#debug = True
 
 
 class DownloadProcess(QProcess):
@@ -34,24 +35,32 @@ class DownloadProcess(QProcess):
         
         new_env = QProcess.systemEnvironment()
         self.setEnvironment(new_env)
+        self.total_duration_s = 0
 
         self.setReadChannel(QProcess.StandardError)
 
         QObject.connect(self, SIGNAL("readyRead()"),
-                self.tryReadPourcent)
+                self.tryReadPercent)
         QObject.connect(self, SIGNAL("finished(int, QProcess::ExitStatus)"), self.finished)
 
-    def tryReadPourcent(self):
+    def tryReadPercent(self):
         line = self.readAll()
-        # format : 5976.281 kB / 56.36 sec (40.3%)
-        r = re.findall("(\d*).{0,1}\d* kB / \d*.{0,1}\d* sec \((\d{1,3}.{0,1}\d{0,1})%\)", line)
-        pourcent = None
-        if len(r) > 0:
-            ok = True
-            (size, ok) = r[0][0].toInt()
-            (pourcent, ok) = r[0][1].toFloat()
-        if pourcent >= 0 and pourcent <= 100:
-            self.emit(SIGNAL("majDownloadBar(float, int)"), pourcent, size)
+        percent = 0
+        duration_s = self.total_duration_s;
+        rate = 0
+        matches = re.findall("Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})", line)
+        if len(matches) > 0:
+            duration_s = int(matches[0][2]) + int(matches[0][1]) * 60 + int(matches[0][0]) * 3600
+            self.total_duration_s = duration_s
+        else:
+            matches = re.findall("time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})\s+bitrate=\s+(.*)$", line)
+            if len(matches) > 0:
+                duration_s = int(matches[0][2]) + int(matches[0][1]) * 60 + int(matches[0][0]) * 3600
+                percent = int(float(duration_s * 100 / self.total_duration_s))
+                rate = str(matches[0][4]).strip()
+
+        if percent >= 0 and percent <= 100:
+            self.emit(SIGNAL("majDownloadBar(PyQt_PyObject, PyQt_PyObject)"), percent, rate)
 
     def finished(self, exitCode, exitStatus):
         if exitCode == 0 and exitStatus == 0: # Fin normale du process
@@ -91,12 +100,10 @@ class DownloadManager(QObject):
         self.process = DownloadProcess()
         self.layout = layout
         self.download = download
-        self.prev_size = None
-        self.prev_time = None
         QObject.connect(self.layout.pushButton, SIGNAL("clicked()"), 
                 self.stop)
-    
-        QObject.connect(self.process, SIGNAL("majDownloadBar(float, int)"),
+
+        QObject.connect(self.process, SIGNAL("majDownloadBar(PyQt_PyObject, PyQt_PyObject)"),
                 self.majProgressBar)
         QObject.connect(self.process, SIGNAL("stoppedByEnd()"), 
                 self.stoppedByEnd)
@@ -105,32 +112,29 @@ class DownloadManager(QObject):
         QObject.connect(self.process, SIGNAL("stoppedByError()"),
                 self.stoppedByError)
 
-    def majProgressBar(self, pourcent, size):
-        if not self.prev_size:
-            self.prev_size = size
-        if not self.prev_time:
-            self.prev_time = time.time()
-        
-        rate = (size - self.prev_size) / (time.time() - self.prev_time)
-        self.layout.progressBar.setFormat(self.download.name + " %p% (" + "%.1f" % rate + " ko/s)")
-        self.layout.progressBar.setValue(pourcent)
-
-        self.prev_size = size
-        self.prev_time = time.time()
+    def majProgressBar(self, percent, rate):
+        rate_label = self.download.description + " %p%"
+        if rate:
+            rate_label += "(%s" % rate + ")"
+        self.layout.progressBar.setFormat(rate_label)
+        self.layout.progressBar.setValue(percent)
 
     def stoppedByEnd(self):
-        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 0)
+        self.emit(SIGNAL("terminated(PyQt_PyObject, PyQt_PyObject)"), self, 0)
 
     def stoppedByUser(self):
-        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 1)
+        self.emit(SIGNAL("terminated(PyQt_PyObject, PyQt_PyObject)"), self, 1)
 
     def stoppedByError(self):
-        self.emit(SIGNAL("terminated(DownloadProcess, int)"), self, 1)
+        self.emit(SIGNAL("terminated(PyQt_PyObject, PyQt_PyObject)"), self, 1)
 
     def start(self):
-        cmd = "/usr/bin/flvstreamer -er %s -o %s" % \
+        cmd = "ffmpeg" + " -i %s -codec copy %s" % \
                 (self.download.url, self.download.path)
-        
+
+        if debug:
+            cmd = "python fake.py"
+
         self.process.start(cmd)
 
     def stop(self):
@@ -168,7 +172,7 @@ class DownloadsModel(QAbstractListModel):
         elif role != Qt.DisplayRole: 
             return QVariant()
 
-        return QVariant(self.datas[index.row()].name)
+        return QVariant(self.datas[index.row()].description)
 
     def headerData(self, section, orientation, role):
         return QVariant()
@@ -201,7 +205,7 @@ class Ui_DownloadManager(QWidget):
 
     def new_layout(self, download):
         progressBar = QProgressBar(self)
-        progressBar.setFormat(download.name + " (%p%)")
+        progressBar.setFormat(download.description + " (%p%)")
         pushButton = QPushButton(self)
         downloadLayout = DownloadHLayout(progressBar, pushButton)
         self.verticalLayout.addLayout(downloadLayout)
@@ -219,34 +223,6 @@ class Ui_DownloadManager(QWidget):
         self.verticalLayout.removeItem(layout)
         del layout
 
-
-class Ui_DownloadManager(QWidget):
-    def __init__(self, parent):
-        QWidget.__init__(self)
-        self.setObjectName("Download")
-        self.resize(466, 88)
-        self.verticalLayout = QVBoxLayout(self)
-        self.verticalLayout.setObjectName("verticalLayout")
-
-    def new_layout(self, download):
-        progressBar = QProgressBar(self)
-        progressBar.setFormat(download.name + " (%p%)")
-        pushButton = QPushButton(self)
-        downloadLayout = DownloadHLayout(progressBar, pushButton)
-        self.verticalLayout.addLayout(downloadLayout)
-        return downloadLayout
-
-    def deleteLayout(self, layout):
-        lo = layout.layout()
-        while True:
-            i=lo.takeAt(0)
-            if i is None : break
-            i.widget().deleteLater()
-            del i
-
-        del lo
-        self.verticalLayout.removeItem(layout)
-        del layout
 
 class DownloadsList(QListView):
     def __init__(self, parent=None):
@@ -255,7 +231,7 @@ class DownloadsList(QListView):
 
         self.model = DownloadsModel(parent, DAO.downloads())
         self.setModel(self.model)
-        
+
     def get(self, row):
         return self.model.datas[row]
 
@@ -287,7 +263,7 @@ class DownloadsManager(QObject):
         self.downloads = []
 
         QObject.connect(self.ui_download, SIGNAL("killAll()"), self.killAll)
-        QObject.connect(self.ui_downloads_list, SIGNAL("activated(QModelIndex)"),
+        QObject.connect(self.ui_downloads_list, SIGNAL("activated(PyQt_PyObject)"),
                     self.download_selected)
 
     def download_selected(self, index=None):
@@ -303,17 +279,17 @@ class DownloadsManager(QObject):
             return
 
         layout = self.ui_download.new_layout(download)
-        layout.progressBar.setToolTip(download.name)
+        layout.progressBar.setToolTip(download.description)
 
         self.nb_downloads_in_progress += 1
 
         download = DownloadManager(layout, download)
         download.start()
-        
-        QObject.connect(self, SIGNAL("deleteLayout(object)"), 
+
+        QObject.connect(self, SIGNAL("deleteLayout(PyQt_PyObject)"), 
                 self.ui_download.deleteLayout)
 
-        QObject.connect(download, SIGNAL("terminated(DownloadProcess, int)"), 
+        QObject.connect(download, SIGNAL("terminated(PyQt_PyObject, PyQt_PyObject)"), 
                 self.downloadTerminated)
 
         self.downloads.append(download)
@@ -321,13 +297,13 @@ class DownloadsManager(QObject):
 
     def downloadTerminated(self, download, exitCode):
         if exitCode == 0:
-            self.emit(SIGNAL("download_terminated(Download)"), download.download)
+            self.emit(SIGNAL("download_terminated(PyQt_PyObject)"), download.download)
             self.delete_download(download.download)
         else:
             download.download.rm()
             self.downloads.remove(download)
 
-        self.emit(SIGNAL("deleteLayout(object)"), download.layout)
+        self.emit(SIGNAL("deleteLayout(PyQt_PyObject)"), download.layout)
 
         self.nb_downloads_in_progress -= 1
 
@@ -343,12 +319,10 @@ class DownloadsManager(QObject):
 
     def blacklist_selected(self):
         for d in self.ui_downloads_list.selectedDownloads():
-            self.emit(SIGNAL("blacklist(Download)"), d)
+            self.emit(SIGNAL("blacklist(PyQt_PyObject)"), d)
             self.ui_downloads_list.remove(d, delete=False)
 
     def killAll(self):
         for d in self.downloads:
             d.process.stop()
-
-
 

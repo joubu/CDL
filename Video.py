@@ -76,10 +76,10 @@ class VideosList(QTableView):
         v.marked_as_seen(seen)
         
         index = self.model.createIndex(index.row(), 3)
-        self.model.emit(SIGNAL("dataChanged(QModelIndex,QModelIndex)"),index, index) 
+        self.model.emit(SIGNAL("dataChanged(PyQt_PyObject, PyQt_PyObject)"),index, index) 
 
     def currentChanged(self, i, j):
-        self.emit(SIGNAL("selectionChanged(VideosList)"), self)
+        self.emit(SIGNAL("selectionChanged(PyQt_PyObject)"), self)
         
 
 class VideosModel(QAbstractTableModel):
@@ -197,14 +197,14 @@ class CategoriesList(QFrame):
                 continue
             listCategory = listCategory[0]
 
-            QObject.disconnect(listCategory, SIGNAL("selectionChanged(VideosList)"), 
+            QObject.disconnect(listCategory, SIGNAL("selectionChanged(PyQt_PyObject)"), 
                     self.selectionChanged)
-            QObject.connect(listCategory, SIGNAL("selectionChanged(VideosList)"), 
+            QObject.connect(listCategory, SIGNAL("selectionChanged(PyQt_PyObject)"), 
                     self.selectionChanged)
 
-            QObject.disconnect(listCategory, SIGNAL("activated(QModelIndex)"),
+            QObject.disconnect(listCategory, SIGNAL("activated(PyQt_PyObject)"),
                     self.play_requested)
-            QObject.connect(listCategory, SIGNAL("activated(QModelIndex)"),
+            QObject.connect(listCategory, SIGNAL("activated(PyQt_PyObject)"),
                     self.play_requested)
 
             c.setVisible(False)
@@ -215,10 +215,10 @@ class CategoriesList(QFrame):
                     listCategory.clear()
                     for v in cat.videos:
                         listCategory.add(v)
-    
+
     def play_requested(self, index):
         v = self.videoSelected()
-        self.emit(SIGNAL("play(Video)"), v)
+        self.emit(SIGNAL("play(PyQt_PyObject)"), v)
 
     def add(self, video):
         categoryGB = self.findChild(CategoryGroupBox, video.category.name)
@@ -258,7 +258,7 @@ class VideosManager(QObject):
         self.ui_categoriesList = categoriesList_ui
         self.refresh_categoriesList(DAO.categories())
 
-        QObject.connect(self.ui_categoriesList, SIGNAL("play(Video)"), 
+        QObject.connect(self.ui_categoriesList, SIGNAL("play(PyQt_PyObject)"), 
                 self.play)
 
     def add_new_video(self, video):

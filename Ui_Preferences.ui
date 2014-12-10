@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>420</width>
-    <height>433</height>
+    <width>381</width>
+    <height>389</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -63,116 +63,77 @@
         <enum>QFrame::Raised</enum>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="discrete">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Action discrète</string>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="1">
-         <widget class="QCheckBox" name="meteo">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Météo</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QCheckBox" name="boite">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Boite à questions</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
          <widget class="QCheckBox" name="petit">
           <property name="text">
            <string>Petit journal</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QCheckBox" name="boucan">
-          <property name="text">
-           <string>Buzz du jour</string>
-          </property>
-         </widget>
-        </item>
         <item row="2" column="1">
-         <widget class="QCheckBox" name="petite">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Petite semaine</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
          <widget class="QCheckBox" name="pepites">
           <property name="text">
            <string>Pépites du net</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="2" column="0">
          <widget class="QCheckBox" name="guignols">
           <property name="text">
            <string>Guignols</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
+        <item row="3" column="0">
          <widget class="QCheckBox" name="grand">
           <property name="text">
            <string>Grand Journal</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
+        <item row="4" column="0">
          <widget class="QCheckBox" name="groland">
           <property name="text">
            <string>Groland</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
-         <widget class="QCheckBox" name="matinale">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
+        <item row="1" column="0">
+         <widget class="QCheckBox" name="jt">
           <property name="text">
-           <string>Matinale</string>
+           <string>Le JT</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
-         <widget class="QCheckBox" name="salut">
-          <property name="enabled">
-           <bool>false</bool>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="supplement">
+          <property name="text">
+           <string>Le Supplément</string>
           </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="salut">
           <property name="text">
            <string>SLT</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
-         <widget class="QCheckBox" name="sav">
+        <item row="3" column="1">
+         <widget class="QCheckBox" name="links">
           <property name="text">
-           <string>SAV</string>
+           <string>L'œil de Links</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="5" column="0">
+         <widget class="QCheckBox" name="explorateurs">
+          <property name="text">
+           <string>Les nouveaux explorateurs</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
          <widget class="QCheckBox" name="zapping">
           <property name="text">
            <string>ZAPPING</string>

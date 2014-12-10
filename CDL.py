@@ -112,7 +112,7 @@ class Preferences(QWidget):
                 cat = DAO.category(unicode(cb.objectName()))
                 config.categories.append(cat)
         DAO.commit()
-        self.emit(SIGNAL("configChanged(list)"), config.categories)
+        self.emit(SIGNAL("configChanged(PyQt_PyObject)"), config.categories)
         self.close()
 
     @pyqtSlot()
@@ -134,27 +134,27 @@ class CDL(QMainWindow):
                 self.ui.categoriesList)
 
         QObject.connect(self.downloadsManager,
-                SIGNAL("download_terminated(Download)"),
+                SIGNAL("download_terminated(PyQt_PyObject)"),
                 self.add_video)
 
         QObject.connect(self, SIGNAL("refresh(PyQt_PyObject)"),
                 self.downloadsManager.refresh_downloads_list)
 
-        QObject.connect(self.ui.downloadsList, SIGNAL("download(Video)"),
+        QObject.connect(self.ui.downloadsList, SIGNAL("download(PyQt_PyObject)"),
                 self.downloadsManager.download)
 
         QObject.connect(self, SIGNAL("construct_downloads(PyQt_PyObject)"),
                 self.generate_downloads)
 
-        QObject.connect(self.downloadsManager, SIGNAL("blacklist(Download)"), 
+        QObject.connect(self.downloadsManager, SIGNAL("blacklist(PyQt_PyObject)"), 
                 self.blacklist)
 
-    	QObject.connect(self.ui.wait, SIGNAL("open()"), self.ui.wait.open)
-    	QObject.connect(self.ui.wait, SIGNAL("close()"), self.ui.wait.close)
+        QObject.connect(self.ui.wait, SIGNAL("open()"), self.ui.wait.open)
+        QObject.connect(self.ui.wait, SIGNAL("close()"), self.ui.wait.close)
 
     def showPreferences(self):
         self.pref = Preferences(self)
-    	QObject.connect(self.pref, SIGNAL("configChanged(list)"),
+        QObject.connect(self.pref, SIGNAL("configChanged(PyQt_PyObject)"),
                 self.videosManager.refresh_categoriesList)
         self.pref.show()
 
@@ -165,7 +165,7 @@ class CDL(QMainWindow):
     def generate_downloads(self, list_data):
         downloads = []
         for d in list_data:
-            download = DAO.download(d['url'], d['category'], d['description'])
+            download = DAO.download(d['url'], d['category'], d['description'], d['name'])
             downloads.append(download)
         self.emit(SIGNAL("refresh(PyQt_PyObject)"), downloads)
 
