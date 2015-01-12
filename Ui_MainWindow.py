@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'Ui_MainWindow.ui'
 #
-# Created: Sat Dec 20 20:10:29 2014
+# Created: Mon Jan 12 18:22:31 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -85,7 +85,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 745, 2676))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 740, 2650))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setMargin(0)
@@ -282,7 +282,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_8.addWidget(self.tabWidget)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 19))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFichier = QtGui.QMenu(self.menubar)
         self.menuFichier.setObjectName(_fromUtf8("menuFichier"))
@@ -340,6 +340,7 @@ class Ui_MainWindow(object):
         self.menuFichier.setTitle(_translate("MainWindow", "Fichier", None))
         self.menu_dition.setTitle(_translate("MainWindow", "Édition", None))
         self.actionQuit.setText(_translate("MainWindow", "Quitter", None))
+        self.actionQuit.setShortcut(_translate("MainWindow", "Ctrl+Q", None))
         self.actionPreferences.setText(_translate("MainWindow", "Préférences", None))
 
 from CDL import DownloadsList, CategoryGroupBox, CategoriesList
