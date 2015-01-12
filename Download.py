@@ -32,10 +32,12 @@ debug = False
 class DownloadProcess(QProcess):
     def __init__(self, parent=None):
         QProcess.__init__(self, parent)
-        
+
         new_env = QProcess.systemEnvironment()
         self.setEnvironment(new_env)
         self.total_duration_s = 0
+        self.prev_duration = None
+        self.prev_time = None
 
         self.setReadChannel(QProcess.StandardError)
 
@@ -45,22 +47,34 @@ class DownloadProcess(QProcess):
 
     def tryReadPercent(self):
         line = self.readAll()
+        # format: frame=  XXX fps= XX q=-1.0 Lsize=    XXXXkB time=00:XX:XX.XX bitrate= XXX.Xkbits/s
         percent = 0
         duration_s = self.total_duration_s;
-        rate = 0
+        rate_kb_s = 0
         matches = re.findall("Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})", line)
         if len(matches) > 0:
             duration_s = int(matches[0][2]) + int(matches[0][1]) * 60 + int(matches[0][0]) * 3600
             self.total_duration_s = duration_s
         else:
-            matches = re.findall("time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})\s+bitrate=\s+(.*)$", line)
+            matches = re.findall("time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})\s+bitrate=\s+.*$", line)
             if len(matches) > 0:
                 duration_s = int(matches[0][2]) + int(matches[0][1]) * 60 + int(matches[0][0]) * 3600
                 percent = int(float(duration_s * 100 / self.total_duration_s))
-                rate = str(matches[0][4]).strip()
+
+        if not self.prev_duration:
+            self.prev_duration = duration_s
+        if not self.prev_time:
+            self.prev_time = time.time()
+
+        rate_kb_s = (duration_s - self.prev_duration) / (time.time() - self.prev_time)
+        if rate_kb_s < 0:
+            rate_kb_s = 0
+
+        self.prev_duration = duration_s
+        self.prev_time = time.time()
 
         if percent >= 0 and percent <= 100:
-            self.emit(SIGNAL("majDownloadBar(PyQt_PyObject, PyQt_PyObject)"), percent, rate)
+            self.emit(SIGNAL("majDownloadBar(PyQt_PyObject, PyQt_PyObject)"), percent, rate_kb_s)
 
     def finished(self, exitCode, exitStatus):
         if exitCode == 0 and exitStatus == 0: # Fin normale du process
@@ -112,10 +126,9 @@ class DownloadManager(QObject):
         QObject.connect(self.process, SIGNAL("stoppedByError()"),
                 self.stoppedByError)
 
-    def majProgressBar(self, percent, rate):
+    def majProgressBar(self, percent, rate_kb_s = 0):
         rate_label = self.download.description + " %p%"
-        if rate:
-            rate_label += "(%s" % rate + ")"
+        rate_label += "(%.1f" % rate_kb_s + " kB/s)"
         self.layout.progressBar.setFormat(rate_label)
         self.layout.progressBar.setValue(percent)
 
