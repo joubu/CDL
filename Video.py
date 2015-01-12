@@ -207,6 +207,10 @@ class CategoriesList(QFrame):
             QObject.connect(listCategory, SIGNAL("activated(PyQt_PyObject)"),
                     self.play_requested)
 
+            try: listCategory.doubleClicked.disconnect()
+            except Exception: pass
+            listCategory.doubleClicked.connect(self.play_requested)
+
             c.setVisible(False)
             for cat in categories:
                 if c.objectName() == cat.name:

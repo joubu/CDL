@@ -279,6 +279,8 @@ class DownloadsManager(QObject):
         QObject.connect(self.ui_downloads_list, SIGNAL("activated(PyQt_PyObject)"),
                     self.download_selected)
 
+        self.ui_downloads_list.doubleClicked.connect(self.download_selected)
+
     def download_selected(self, index=None):
         if index and isinstance(index, QModelIndex):
             d = self.ui_downloads_list.get(index.row())
